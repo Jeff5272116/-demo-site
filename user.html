@@ -42,20 +42,6 @@
   .empty { text-align:center; color:#9ca3af; padding:30px; font-size:14px; }
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1f2937; color:#fff; padding:12px 22px; border-radius:8px; font-size:14px; opacity:0; transition:opacity .3s; pointer-events:none; z-index:99; }
   .toast.show { opacity:1; } .toast.warn { background:#c2410c; }
-  /* === 後台資料庫呈現（規格 5.4 / 5.5）=== */
-  .db-banner { background:#0f172a; border-radius:10px 10px 0 0; padding:14px 20px; color:#e2e8f0; }
-  .db-banner h2 { color:#7dd3fc; font-size:16px; } .db-banner p { font-size:12px; color:#94a3b8; }
-  .db-body { background:#0b1220; border-radius:0 0 10px 10px; padding:18px 20px; margin-bottom:20px; }
-  .log-title { color:#7dd3fc; font-weight:700; font-size:13px; margin:4px 0 8px; }
-  .log-panel { font-family:ui-monospace,Consolas,monospace; font-size:13px; color:#c7d2fe; background:#111a2e; border:1px solid #1e293b; border-radius:8px; padding:14px 16px; margin-bottom:18px; white-space:pre-wrap; }
-  .log-panel .ok { color:#86efac; } .log-panel .warn { color:#fca5a5; } .log-panel .key { color:#fcd34d; }
-  .db-scroll { overflow-x:auto; }
-  .db-table { width:100%; border-collapse:collapse; font-size:12px; color:#cbd5e1; margin-bottom:6px; }
-  .db-table th, .db-table td { border:1px solid #1e293b; padding:5px 8px; text-align:left; white-space:nowrap; }
-  .db-table th { background:#1e293b; color:#7dd3fc; }
-  .db-table tr.new td { background:#15331f; }
-  .db-cap { color:#94a3b8; font-size:12px; margin:14px 0 6px; }
-  .db-cap b { color:#7dd3fc; }
 </style>
 </head>
 <body>
@@ -63,7 +49,6 @@
 <header>
   <div>
     <h1>師傅請款與專案成本管理系統</h1>
-    <div class="sub">使用者端（師傅 worker）· 前端示範 · 未串接資料庫</div>
   </div>
   <div class="who">👷 <select id="userSel" onchange="switchUser()"></select></div>
 </header>
@@ -78,31 +63,16 @@
   <section class="tab active" id="tab-submit">
     <div class="card">
       <h2>請款提交</h2>
-      <p class="hint">依序選擇：案名 → 樓層 → 工作項目 → 數量，系統自動計價後提交。</p>
       <div class="grid2">
-        <div class="field"><label>案名（project）</label><select id="f-project" onchange="onProjectChange()"></select></div>
-        <div class="field"><label>樓層（floor）</label><select id="f-floor"></select></div>
+        <div class="field"><label>建案</label><select id="f-project" onchange="onProjectChange()"></select></div>
+        <div class="field"><label>樓層</label><select id="f-floor"></select></div>
       </div>
       <div class="grid2">
-        <div class="field"><label>工作項目（制式／客變）</label><select id="f-item" onchange="onItemChange()"></select></div>
-        <div class="field"><label>數量（quantity）</label><input type="number" id="f-qty" min="1" value="1" oninput="calcAmount()"></div>
+        <div class="field"><label>規格（制式／客變）</label><select id="f-item" onchange="onItemChange()"></select></div>
+        <div class="field"><label>數量</label><input type="number" id="f-qty" min="1" value="1" oninput="calcAmount()"></div>
       </div>
-      <div class="amount-box">unit_price：<b id="o-unit">$0</b> ／ 單位　　amount（預估）：<b id="o-amount">$0</b></div>
-      <button class="btn" onclick="submitBilling()">提交請款</button>
-    </div>
-
-    <!-- 後台資料庫寫入呈現 -->
-    <div class="db-banner">
-      <h2>📦 後台資料庫寫入邏輯（示意）</h2>
-      <p>客戶看不到的後端處理，這裡攤開給你看。每次提交都在「單一交易 Transaction」內完成計價、防重複與寫入。</p>
-    </div>
-    <div class="db-body">
-      <div class="log-title">🔄 最近一次寫入流程</div>
-      <div class="log-panel" id="write-log">尚未提交任何請款。送出後，這裡會逐步顯示後台如何寫入資料庫。</div>
-      <div class="db-cap">資料表 <b>billing_records</b>（請款記錄・規格 5.4）— 每筆提交為獨立 INSERT，永不 UPDATE 覆蓋。<br>worker_id／project_id 為外鍵，對應 users／projects 表的 id。</div>
-      <div class="db-scroll"><table class="db-table" id="db-billing"></table></div>
-      <div class="db-cap">資料表 <b>status_history</b>（狀態異動歷史・規格 5.5）— 每次狀態變化都留痕，可追溯。</div>
-      <div class="db-scroll"><table class="db-table" id="db-history"></table></div>
+      <div class="amount-box">單價：<b id="o-unit">$0</b> ／ 單位　　預估金額：<b id="o-amount">$0</b></div>
+      <button class="btn" onclick="submitBilling()">送出請款</button>
     </div>
   </section>
 
@@ -110,14 +80,13 @@
   <section class="tab" id="tab-mine">
     <div class="card">
       <h2>我的請款紀錄</h2>
-      <p class="hint">僅顯示本人（worker_id = 目前登入者）資料，互相不可見（規格第 3 章資料隔離）。可指定期間查詢薪資總額（規格 4.1），總額僅計入 status = approved。</p>
       <div class="grid2">
-        <div class="field"><label>期間起（submitted_at ≥）</label><input type="date" id="mine-start" onchange="renderMine()"></div>
-        <div class="field"><label>期間迄（submitted_at ≤）</label><input type="date" id="mine-end" onchange="renderMine()"></div>
+        <div class="field"><label>期間起</label><input type="date" id="mine-start" onchange="renderMine()"></div>
+        <div class="field"><label>期間迄</label><input type="date" id="mine-end" onchange="renderMine()"></div>
       </div>
-      <div class="field"><label>建案（案名 project）</label><select id="mine-project" onchange="renderMine()"></select></div>
+      <div class="field"><label>建案</label><select id="mine-project" onchange="renderMine()"></select></div>
       <button class="btn btn-ghost btn-sm" style="margin-bottom:12px" onclick="clearPeriod()">顯示全部期間</button>
-      <div class="amount-box" style="background:#eff6ff;border-color:#bfdbfe">指定期間已批准（approved）薪資總額：<b id="mine-total" style="color:#1d4ed8">$0</b></div>
+      <div class="amount-box" style="background:#eff6ff;border-color:#bfdbfe">指定期間已通過薪資總額：<b id="mine-total" style="color:#1d4ed8">$0</b></div>
       <div id="mine-table"></div>
     </div>
   </section>
@@ -126,7 +95,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-/* ===== 參照資料（名詞對齊規格書第 5 章）===== */
+/* ===== 參照資料（示範用）===== */
 // users（規格 5.1）
 const USERS = [
   { id:1, name:'張三', account:'chang', role:'worker', status:'啟用' },
@@ -157,7 +126,7 @@ const UNIT_PRICES = [
   { id:9,  project_id:5, spec_type:'制式', default_qty:6,    unit_price:1000 },
   { id:10, project_id:5, spec_type:'客變', default_qty:null, unit_price:1500 },
 ];
-const FLOORS = ['1F','2F','3F','4F','5F','地下1F'];
+const FLOORS = ['地下一樓','一樓','二樓','三樓','四樓','五樓'];
 const STATUS_LABEL = { pending:'待審核', approved:'已批准', rejected:'已駁回' };
 const TODAY = new Date().toISOString().slice(0,10);
 function nowTime(){ return new Date().toTimeString().slice(0,8); }
@@ -189,13 +158,13 @@ function seed(worker_id, project_id, floor, spec_type, quantity, finalStatus, re
     addHistory(r.id, 'pending', finalStatus, ADMIN_ID, reason||'');
   }
 }
-seed(1, 1, '2F',     '制式', 10, 'approved', null, '2026-05-20');
-seed(1, 2, '3F',     '制式', 8,  'approved', null, '2026-05-22');
-seed(1, 1, '5F',     '制式', 10, 'pending',  null, '2026-06-02');
-seed(2, 3, '1F',     '制式', 5,  'approved', null, '2026-05-28');
-seed(2, 4, '地下1F', '客變', 3,  'rejected', '數量與現場不符，請重新確認', '2026-06-01');
-seed(3, 5, '4F',     '客變', 6,  'pending',  null, '2026-06-02');
-seed(3, 1, '4F',     '客變', 4,  'approved', null, '2026-05-30');
+seed(1, 1, '二樓',     '制式', 10, 'approved', null, '2026-05-20');
+seed(1, 2, '三樓',     '制式', 8,  'approved', null, '2026-05-22');
+seed(1, 1, '五樓',     '制式', 10, 'pending',  null, '2026-06-02');
+seed(2, 3, '一樓',     '制式', 5,  'approved', null, '2026-05-28');
+seed(2, 4, '地下一樓', '客變', 3,  'rejected', '數量與現場不符，請重新確認', '2026-06-01');
+seed(3, 5, '四樓',     '客變', 6,  'pending',  null, '2026-06-02');
+seed(3, 1, '四樓',     '客變', 4,  'approved', null, '2026-05-30');
 
 /* 目前登入的師傅（worker_id）*/
 let ME = 1;
@@ -246,21 +215,20 @@ function calcAmount() {
   document.getElementById('o-amount').textContent = '$'+(unit*qty).toLocaleString();
 }
 
-/* ===== 提交 = 後台寫入邏輯（規格 4.2 / 4.3 / 7.2）===== */
+/* ===== 提交請款 ===== */
 function submitBilling() {
   const u = curRow();
   const floor = document.getElementById('f-floor').value;
   const quantity = +document.getElementById('f-qty').value;
-  if (!u || quantity<=0) return toast('請確認工作項目與數量', true);
+  if (!u || quantity<=0) return toast('請確認規格與數量', true);
 
   const project_id = u.project_id;
-  const spec_type = u.spec_type;                            // 工作項目 = 制式／客變
-  const unit_price_snapshot = u.unit_price;                 // ① 單價快照
-  const amount = unit_price_snapshot * quantity;            // ② 金額
-  const unique_key = `${project_id}｜${floor}｜${spec_type}｜${TODAY}`;  // ③ 唯一鍵
-  const dup = billing_records.some(r => r.unique_key===unique_key && r.status!=='rejected'); // ④ 唯一索引檢查
+  const spec_type = u.spec_type;
+  const unit_price_snapshot = u.unit_price;
+  const amount = unit_price_snapshot * quantity;
+  const unique_key = `${project_id}｜${floor}｜${spec_type}｜${TODAY}`;
+  const dup = billing_records.some(r => r.unique_key===unique_key && r.status!=='rejected');  // 防重複檢查
 
-  // ⑤ INSERT billing_records（新增列，不覆蓋）
   const r = {
     id: ++billingSeq, worker_id: ME, project_id, floor,
     item_name: spec_type, spec_type, quantity,
@@ -269,43 +237,14 @@ function submitBilling() {
     submitted_at: TODAY, _suspect: dup,
   };
   billing_records.push(r);
-  // ⑥ INSERT status_history
-  addHistory(r.id, null, 'pending', ME, dup?'疑似重複，待管理者二次確認':'');
+  addHistory(r.id, null, 'pending', ME, dup?'疑似重複':'');
 
-  renderLog([
-    `<span class="ok">🔄 後台寫入流程（單一交易 Transaction）</span>`,
-    `① 由 unit_prices 取得單價 → 寫入 <span class="key">unit_price_snapshot = $${unit_price_snapshot.toLocaleString()}</span>`,
-    `② 計算 <span class="key">amount = unit_price_snapshot × quantity = ${unit_price_snapshot.toLocaleString()} × ${quantity} = $${amount.toLocaleString()}</span>`,
-    `③ 組合 <span class="key">unique_key = "${unique_key}"</span>　（project_id｜floor｜制式/客變｜日期）`,
-    dup ? `④ 檢查 unique_key 唯一索引 … <span class="warn">⚠ 已存在 → 標示「疑似重複」，待管理者二次確認</span>`
-        : `④ 檢查 unique_key 唯一索引 … <span class="ok">✅ 無重複，可寫入</span>`,
-    `⑤ <span class="ok">INSERT INTO billing_records</span>（新增 id=${r.id} 列，不以 UPDATE 覆蓋既有資料）`,
-    `⑥ <span class="ok">INSERT INTO status_history</span>（NULL → pending）`,
-    `<span class="ok">✅ 交易完成，status = pending（待審核）</span>`,
-  ]);
-  renderDB(r.id);
-  toast(dup ? '已提交，偵測到疑似重複，將由管理者二次確認' : '請款已提交，status = pending', dup);
-}
-
-/* ===== 呈現：寫入流程 + 兩張資料表 ===== */
-function renderLog(steps){ document.getElementById('write-log').innerHTML = steps.join('\n'); }
-function renderDB(highlightId) {
-  let h = `<thead><tr><th>id</th><th>worker_id</th><th>project_id</th><th>floor</th><th>item_name</th><th>spec_type</th>
-    <th>quantity</th><th>unit_price_snapshot</th><th>amount</th><th>unique_key</th><th>status</th><th>reviewed_by</th><th>reject_reason</th><th>submitted_at</th></tr></thead><tbody>`;
-  if (!billing_records.length) h += `<tr><td colspan="14" style="text-align:center;color:#64748b">（空）尚無資料</td></tr>`;
-  billing_records.forEach(r => {
-    h += `<tr class="${r.id===highlightId?'new':''}"><td>${r.id}</td><td>${r.worker_id}</td><td>${r.project_id}</td><td>${r.floor}</td>
-      <td>${r.item_name}${r._suspect?' ⚠':''}</td><td>${r.spec_type}</td><td>${r.quantity}</td>
-      <td>$${r.unit_price_snapshot.toLocaleString()}</td><td>$${r.amount.toLocaleString()}</td>
-      <td>${r.unique_key}</td><td>${r.status}</td><td>${r.reviewed_by??'NULL'}</td><td>${r.reject_reason??'NULL'}</td><td>${r.submitted_at}</td></tr>`;
-  });
-  document.getElementById('db-billing').innerHTML = h + '</tbody>';
-  let hh = `<thead><tr><th>id</th><th>record_id</th><th>from_status</th><th>to_status</th><th>actor_id</th><th>note</th><th>created_at</th></tr></thead><tbody>`;
-  if (!status_history.length) hh += `<tr><td colspan="7" style="text-align:center;color:#64748b">（空）尚無資料</td></tr>`;
-  status_history.forEach(s => {
-    hh += `<tr><td>${s.id}</td><td>${s.record_id}</td><td>${s.from_status??'NULL'}</td><td>${s.to_status}</td><td>${s.actor_id}</td><td>${s.note||''}</td><td>${s.created_at}</td></tr>`;
-  });
-  document.getElementById('db-history').innerHTML = hh + '</tbody>';
+  toast(dup ? '已送出，偵測到疑似重複，將由管理者再次確認' : '請款已送出，狀態：待審核', dup);
+  // 送出後切到「我的請款紀錄」讓使用者看到這筆
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-mine').classList.add('active');
+  document.querySelectorAll('#nav button').forEach((b,i)=>b.classList.toggle('active', i===1));
+  renderMine();
 }
 
 /* ===== 我的紀錄（資料隔離）===== */
@@ -327,7 +266,7 @@ function renderMine() {
     const note = (start||end) ? '此期間無紀錄。' : (userName(ME)+' 尚無請款紀錄，請先到「請款提交」送出。');
     document.getElementById('mine-table').innerHTML = '<div class="empty">'+note+'</div>'; return;
   }
-  let h = `<table><thead><tr><th>案名 (project)</th><th>樓層 (floor)</th><th>工作項目 (制式/客變)</th><th>數量 (quantity)</th><th>金額 (amount)</th><th>狀態 (status)</th><th>submitted_at</th></tr></thead><tbody>`;
+  let h = `<table><thead><tr><th>建案</th><th>樓層</th><th>規格</th><th>數量</th><th>金額</th><th>狀態</th><th>提交日期</th></tr></thead><tbody>`;
   mine.forEach(r => {
     h += `<tr><td>${projectName(r.project_id)}</td><td>${r.floor}</td><td>${r.spec_type}${r._suspect?'<span class="dup-flag">疑似重複</span>':''}</td>
       <td>${r.quantity}</td><td>$${r.amount.toLocaleString()}</td><td><span class="badge ${r.status}">${STATUS_LABEL[r.status]}</span></td><td>${r.submitted_at}</td></tr>`;
@@ -347,11 +286,6 @@ renderUserOptions();
 fillProjects();
 document.getElementById('mine-project').innerHTML =
   '<option value="all">全部建案</option>' + PROJECTS.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
-renderDB();
-renderLog([
-  `<span class="ok">ℹ 下方 billing_records / status_history 為示範資料（含各師傅的請款）。</span>`,
-  `自行於上方提交一筆請款後，這裡會逐步顯示完整的後台寫入流程。`,
-]);
 </script>
 </body>
 </html>
