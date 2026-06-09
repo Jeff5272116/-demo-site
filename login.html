@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登入 — 師傅請款與專案成本管理系統</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:"Microsoft JhengHei","PingFang TC",system-ui,sans-serif; background:linear-gradient(135deg,#1e3a5f,#3b1e5f); color:#1f2937; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .box { background:#fff; border-radius:14px; box-shadow:0 12px 40px rgba(0,0,0,.25); width:100%; max-width:420px; padding:32px 30px; }
+  .box h1 { font-size:19px; color:#3b1e5f; margin-bottom:4px; }
+  .box .sub { font-size:13px; color:#6b7280; margin-bottom:24px; }
+  label { display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#374151; }
+  .field { margin-bottom:16px; }
+  input { width:100%; padding:11px 13px; border:1px solid #d1d5db; border-radius:8px; font-size:15px; }
+  input:focus { outline:none; border-color:#5b21b6; }
+  .btn { width:100%; background:#5b21b6; color:#fff; border:none; padding:12px; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer; margin-top:4px; }
+  .btn:hover { background:#4c1d95; }
+  .err { color:#b91c1c; font-size:13px; margin-bottom:14px; min-height:18px; }
+  .hint { margin-top:22px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px 14px; font-size:12px; color:#6b7280; line-height:1.8; }
+  .hint b { color:#374151; }
+  .hint code { background:#eef2ff; color:#4338ca; padding:1px 6px; border-radius:4px; }
+</style>
+</head>
+<body>
+  <form class="box" onsubmit="doLogin(event)">
+    <h1>師傅請款與專案成本管理系統</h1>
+    <div class="sub">請輸入帳號密碼登入，系統會自動依角色導向對應介面</div>
+    <div class="err" id="err"></div>
+    <div class="field"><label>登入帳號</label><input id="acct" autocomplete="username" placeholder="例：chang"></div>
+    <div class="field"><label>密碼</label><input id="pwd" type="password" autocomplete="current-password" placeholder="請輸入密碼"></div>
+    <button class="btn" type="submit">登入</button>
+    <div class="hint">
+      <b>Demo 測試帳號（密碼皆為 <code>1234</code>，管理者為 <code>admin</code>）</b><br>
+      師傅：<code>chang</code> 張三、<code>lee</code> 李四、<code>wang</code> 王五<br>
+      管理者：<code>admin</code>（密碼 <code>admin</code>）
+    </div>
+  </form>
+
+<script>
+/* 帳號表（規格 5.1）— 純前端 Demo，密碼僅前端比對 */
+const USERS = [
+  { id:1, name:'張三',       account:'chang', password:'1234',  role:'worker', status:'啟用' },
+  { id:2, name:'李四',       account:'lee',   password:'1234',  role:'worker', status:'啟用' },
+  { id:3, name:'王五',       account:'wang',  password:'1234',  role:'worker', status:'啟用' },
+  { id:9, name:'系統管理者', account:'admin', password:'admin', role:'admin',  status:'啟用' },
+];
+
+function doLogin(e) {
+  e.preventDefault();
+  const acct = document.getElementById('acct').value.trim();
+  const pwd  = document.getElementById('pwd').value;
+  const err  = document.getElementById('err');
+  const u = USERS.find(x => x.account === acct);
+  if (!u || u.password !== pwd) { err.textContent = '帳號或密碼錯誤'; return; }
+  if (u.status !== '啟用')      { err.textContent = '此帳號已停用，請聯絡管理者'; return; }
+  // 自動辨識角色 → 導向對應介面，並以網址參數帶入身分
+  if (u.role === 'admin') location.href = '管理員.html?uid=' + u.id;
+  else                    location.href = '使用者.html?uid=' + u.id;
+}
+</script>
+</body>
+</html>
