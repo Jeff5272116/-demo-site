@@ -180,7 +180,6 @@
       <div class="hint">取代各建案明細：僅列出「審核通過」的請款，依審核通過時間排序；月份以審核通過時間為準，方便每月對工人發薪。</div>
       <div class="filterbar">
         <select id="v2-month" onchange="renderDash2()" style="max-width:170px"></select>
-        <input id="v2-search" placeholder="🔍 搜尋師傅／建案" oninput="renderDash2()" style="max-width:220px">
       </div>
       <div id="v2-table" style="margin-top:12px"></div>
 
@@ -624,8 +623,8 @@ function renderDash2() {
   document.getElementById('v2-open').textContent   = PROJECTS.filter(p=>!p.closed).length;
   document.getElementById('v2-closed').textContent = PROJECTS.filter(p=>p.closed).length;
   document.getElementById('v2-cases').textContent  = PROJECTS.length;
-  const month = sel.value, kw = document.getElementById('v2-search').value.trim();
-  let recs = dash2Records(month, kw);
+  const month = sel.value;
+  let recs = dash2Records(month);
   const total = recs.reduce((s,r)=>s+r.amount,0);
   document.getElementById('v2-total').textContent = '$'+total.toLocaleString();
   document.getElementById('v2-count').textContent = recs.length;
@@ -638,9 +637,8 @@ function renderDash2() {
   });
   document.getElementById('v2-table').innerHTML = h + '</tbody></table>';
 }
-function dash2Records(month, kw){   // 已通過、依審核通過時間（新→舊）排序，並以通過時間做月份篩選
+function dash2Records(month){   // 已通過、依審核通過時間（新→舊）排序，並以通過時間做月份篩選
   let recs = billing_records.filter(r=>r.status==='approved' && r.reviewed_at && (!month || month==='all' || monthOf(r.reviewed_at)===month));
-  if (kw) recs = recs.filter(r=>userName(r.worker_id).includes(kw) || projectName(r.project_id).includes(kw));
   return recs.sort((a,b)=>(b.reviewed_at||'').localeCompare(a.reviewed_at||''));
 }
 function toggleProject(pid){
@@ -686,8 +684,7 @@ function exportCSV() {   // 版 1：依勾選建案 + 目前月份篩選
 }
 function exportCSV2() {   // 版 2：依所選月份（以審核通過時間為準）
   const month = document.getElementById('v2-month').value;
-  const kw = document.getElementById('v2-search').value.trim();
-  const recs = dash2Records(month, kw);
+  const recs = dash2Records(month);
   if (!recs.length) return toast('所選月份沒有可匯出的請款',true);
   downloadCSV(buildPayoutCSV(recs, TODAY), '撥款檔_'+(month && month!=='all' ? month : '全部')+'.csv');
   toast('已匯出撥款 CSV（'+recs.length+' 筆）');
