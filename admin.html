@@ -254,15 +254,17 @@ function addHistory(record_id, from_status, to_status, actor_id, note='') {
 }
 
 /* 預植示範資料（讓審核流程有東西可演）*/
-function seed(worker_id, project_id, floor, spec_type, quantity, finalStatus, reason, reviewedAt) {
+function seed(worker_id, project_id, floor, spec_type, quantity, finalStatus, reason, reviewedAt, submittedAt) {
   const u = UNIT_PRICES.find(x=>x.project_id===project_id && x.spec_type===spec_type);
   const unit_price_snapshot = u.unit_price, amount = unit_price_snapshot*quantity;
   const unique_key = `${project_id}｜${floor}｜${spec_type}｜${TODAY}`;
   const dup = billing_records.some(r=>r.unique_key===unique_key && r.status!=='rejected');
+  // 申請日：優先用 submittedAt；否則退回審核日當天（pending 則用今天）
+  const submitDate = submittedAt || (reviewedAt ? reviewedAt.slice(0,10) : TODAY);
   const r = { id:++billingSeq, worker_id, project_id, floor, item_name:spec_type, spec_type, quantity,
     unit_price_snapshot, amount, unique_key, status:'pending',
     reviewed_by:null, reviewed_at:null, reject_reason:null,
-    submitted_at:(reviewedAt ? reviewedAt.slice(0,10) : TODAY), _suspect:dup };
+    submitted_at:submitDate, _suspect:dup };
   billing_records.push(r);
   addHistory(r.id, null, 'pending', worker_id, dup?'疑似重複':'');
   if (finalStatus !== 'pending') {
@@ -271,24 +273,25 @@ function seed(worker_id, project_id, floor, spec_type, quantity, finalStatus, re
     addHistory(r.id, 'pending', finalStatus, ADMIN_ID, reason||'');
   }
 }
-seed(1, 1, '二樓',     '制式', 10, 'approved', null, '2026-05-21 09:15:30');
+//                                                              審核通過時間            申請日（跨月對照）
+seed(1, 1, '二樓',     '制式', 10, 'approved', null, '2026-05-21 09:15:30', '2026-04-29');  // 4月申請→5月過審
 seed(1, 2, '三樓',     '制式', 8,  'pending');
 seed(2, 3, '一樓',     '制式', 5,  'pending');
 seed(2, 1, '二樓',     '制式', 10, 'pending');   // 與第 1 筆同 unique_key → 疑似重複
 seed(2, 4, '地下一樓', '客變', 3,  'rejected', '數量與現場不符，請重新確認', '2026-06-01 14:22:10');
-seed(3, 5, '四樓',     '客變', 6,  'approved', null, '2026-05-31 10:05:00');
-seed(3, 2, '五樓',     '制式', 8,  'approved', null, '2026-05-29 16:40:12');
+seed(3, 5, '四樓',     '客變', 6,  'approved', null, '2026-05-31 10:05:00', '2026-05-27');  // 同月、相差數天
+seed(3, 2, '五樓',     '制式', 8,  'approved', null, '2026-05-29 16:40:12');                 // 同日（預設）
 seed(1, 3, '二樓',     '客變', 4,  'approved', null, '2026-05-25 11:18:45');
 // 3 月已通過
-seed(1, 1, '一樓',     '制式', 10, 'approved', null, '2026-03-12 10:20:00');
+seed(1, 1, '一樓',     '制式', 10, 'approved', null, '2026-03-12 10:20:00', '2026-02-27');  // 2月申請→3月過審
 seed(2, 2, '一樓',     '制式', 8,  'approved', null, '2026-03-18 14:30:00');
 seed(3, 3, '三樓',     '客變', 4,  'approved', null, '2026-03-25 09:40:00');
 // 4 月已通過
-seed(1, 4, '一樓',     '制式', 12, 'approved', null, '2026-04-08 11:15:00');
+seed(1, 4, '一樓',     '制式', 12, 'approved', null, '2026-04-08 11:15:00', '2026-03-30');  // 3月申請→4月過審
 seed(2, 5, '二樓',     '制式', 6,  'approved', null, '2026-04-16 15:05:00');
 seed(3, 1, '三樓',     '客變', 5,  'approved', null, '2026-04-22 10:50:00');
 // 6 月已通過
-seed(1, 2, '二樓',     '客變', 3,  'approved', null, '2026-06-03 09:30:00');
+seed(1, 2, '二樓',     '客變', 3,  'approved', null, '2026-06-03 09:30:00', '2026-05-30');  // 5月申請→6月過審
 seed(2, 3, '四樓',     '制式', 5,  'approved', null, '2026-06-05 13:20:00');
 seed(3, 4, '二樓',     '制式', 12, 'approved', null, '2026-06-06 16:10:00');
 
