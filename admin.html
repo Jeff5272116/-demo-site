@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>師傅請款系統（管理員端）— Demo</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft JhengHei","PingFang TC",system-ui,sans-serif; background:#f4f6f9; color:#1f2937; line-height:1.6; }
+  header { background:#3b1e5f; color:#fff; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+  header h1 { font-size:18px; font-weight:600; }
+  header .sub { font-size:12px; opacity:.75; }
+  .who { background:#7c3aed; padding:6px 8px 6px 14px; border-radius:999px; font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px; }
+  .who .logout { background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.5); padding:4px 12px; border-radius:999px; font-size:13px; cursor:pointer; }
+  .who .logout:hover { background:rgba(255,255,255,.3); }
+  nav { background:#fff; border-bottom:1px solid #e5e7eb; padding:0 24px; display:flex; gap:4px; flex-wrap:wrap; }
+  nav button { background:none; border:none; padding:14px 18px; cursor:pointer; font-size:15px; color:#6b7280; border-bottom:3px solid transparent; }
+  nav button.active { color:#5b21b6; border-bottom-color:#5b21b6; font-weight:600; }
+  nav button:hover { color:#5b21b6; }
+  main { max-width:1000px; margin:24px auto; padding:0 24px; }
+  .tab { display:none; } .tab.active { display:block; }
+  .card { background:#fff; border-radius:10px; padding:22px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:20px; }
+  .card h2 { font-size:17px; margin-bottom:4px; }
+  .card .hint { font-size:13px; color:#6b7280; margin-bottom:18px; }
+  label { display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#374151; }
+  .field { margin-bottom:16px; }
+  select, input { width:100%; padding:10px 12px; border:1px solid #d1d5db; border-radius:7px; font-size:15px; background:#fff; }
+  input[type="checkbox"] { width:auto; cursor:pointer; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .btn { background:#5b21b6; color:#fff; border:none; padding:11px 22px; border-radius:7px; font-size:15px; cursor:pointer; font-weight:600; }
+  .btn:hover { background:#4c1d95; }
+  .btn-sm { padding:6px 12px; font-size:13px; border-radius:6px; }
+  .btn-green { background:#059669; } .btn-green:hover { background:#047857; }
+  .btn-red { background:#dc2626; } .btn-red:hover { background:#b91c1c; }
+  .btn-ghost { background:#fff; color:#5b21b6; border:1px solid #cbd5e1; } .btn-ghost:hover { background:#f5f3ff; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:10px 12px; border-bottom:1px solid #eef0f3; }
+  th { font-size:12px; color:#6b7280; background:#fafbfc; }
+  tr:hover td { background:#fafbfc; }
+  .badge { display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+  .badge.pending { background:#fef3c7; color:#92400e; }
+  .badge.approved { background:#d1fae5; color:#065f46; }
+  .badge.rejected { background:#fee2e2; color:#991b1b; }
+  .dup-flag { background:#fff7ed; color:#c2410c; border:1px solid #fdba74; font-size:11px; padding:2px 7px; border-radius:5px; margin-left:6px; }
+  tr.dup td { background:#fffaf5 !important; }
+  tr.grp td { background:#f5f3ff; border-top:2px solid #ede9fe; }
+  tr.grp:hover td { background:#f5f3ff; }
+  .bulkbar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:10px 4px; margin-bottom:8px; border-bottom:1px solid #eef0f3; }
+  .bulkbar label { font-size:14px; font-weight:600; margin-bottom:0; display:inline-flex; align-items:center; gap:6px; cursor:pointer; }
+  .bulkbar .sel-count { font-size:13px; color:#6b7280; }
+  .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .stat { background:#fff; border-radius:10px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .stat .num { font-size:28px; font-weight:700; color:#5b21b6; } .stat .lbl { font-size:13px; color:#6b7280; }
+  .empty { text-align:center; color:#9ca3af; padding:30px; font-size:14px; }
+  .demo-note { font-size:12px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:8px 12px; margin-bottom:16px; }
+  .amount-line { background:#f5f3ff; border:1px solid #ddd6fe; border-radius:8px; padding:12px 16px; font-size:15px; }
+  .amount-line b { font-size:20px; color:#5b21b6; }
+  .filterbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
+  .seg { display:inline-flex; border:1px solid #d1d5db; border-radius:8px; overflow:hidden; }
+  .seg button { border:none; background:#fff; padding:8px 16px; font-size:14px; cursor:pointer; color:#6b7280; border-right:1px solid #e5e7eb; }
+  .seg button:last-child { border-right:none; }
+  .seg button.on { background:#5b21b6; color:#fff; font-weight:600; }
+  .subtotal td { background:#f8f7ff; font-weight:600; }
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1f2937; color:#fff; padding:12px 22px; border-radius:8px; font-size:14px; opacity:0; transition:opacity .3s; pointer-events:none; z-index:99; }
+  .toast.show { opacity:1; } .toast.warn { background:#c2410c; }
+  tr.detail td { padding:0 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>師傅請款與專案成本管理系統</h1>
+  </div>
+  <div class="who">🛠 <span id="whoName">最高管理者</span>
+    <button class="logout" onclick="logout()">登出</button>
+  </div>
+</header>
+
+<nav id="nav">
+  <button class="active" onclick="showTab('review',this)">請款審核</button>
+  <button onclick="showTab('all',this)">全部請款紀錄</button>
+  <button onclick="showTab('prices',this)">專案／單價</button>
+  <button onclick="showTab('users',this)">使用者管理</button>
+  <button onclick="showTab('dash',this)">報表儀表板</button>
+  <button onclick="showTab('dash2',this)">報表與儀表版 2</button>
+</nav>
+
+<main>
+  <!-- 請款審核（規格 4.4 / 4.5）-->
+  <section class="tab active" id="tab-review">
+    <div class="card">
+      <h2>請款審核</h2>
+      <div id="review-table"></div>
+    </div>
+  </section>
+
+  <!-- 全部請款紀錄 -->
+  <section class="tab" id="tab-all">
+    <div class="card">
+      <h2>全部請款紀錄</h2>
+      <div id="all-filter" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap"></div>
+      <div id="all-table"></div>
+    </div>
+  </section>
+
+  <!-- 專案／單價（規格 4.6 / 5.2 / 5.3）-->
+  <section class="tab" id="tab-prices">
+    <div class="card">
+      <h2>建案管理</h2>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <input id="np-name" placeholder="建案名稱" style="max-width:220px">
+        <input id="np-loc" placeholder="建案地點" style="max-width:220px">
+        <button class="btn btn-sm" onclick="addProject()">＋ 新增建案</button>
+      </div>
+      <div class="hint" style="margin-bottom:10px">點建案可展開／收合，於該建案底下直接設定與調整單價。</div>
+      <div id="proj-list"></div>
+    </div>
+  </section>
+
+  <!-- 使用者管理（規格 3 / 5.1）-->
+  <section class="tab" id="tab-users">
+    <div class="card">
+      <h2>使用者 / 權限管理</h2>
+      <div id="user-table"></div>
+      <div class="demo-note" style="margin-top:16px" id="nu-title">新增使用者（帳號／密碼由管理者登打）</div>
+      <div class="grid2">
+        <div class="field"><label>姓名</label><input id="nu-name" placeholder="例：王五"></div>
+        <div class="field"><label>登入帳號</label><input id="nu-acct" placeholder="例：wang"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>密碼</label><input id="nu-pwd" placeholder="例：1234"></div>
+        <div class="field"><label>角色</label>
+          <select id="nu-role"><option value="worker">師傅</option><option value="admin">最高管理者</option><option value="third_party">第三方</option></select>
+        </div>
+      </div>
+      <div class="hint" style="margin-bottom:14px">收款銀行代號／帳號由師傅於「我的收款資料」自行填寫，管理者不需代打。</div>
+      <button class="btn btn-sm" id="nu-submit" onclick="submitUser()">＋ 新增使用者</button>
+      <button class="btn btn-sm btn-ghost" id="nu-cancel" style="display:none" onclick="cancelEditUser()">取消編輯</button>
+    </div>
+  </section>
+
+  <!-- 報表儀表板（規格 4.8）-->
+  <section class="tab" id="tab-dash">
+    <div class="card">
+      <h2>報表與儀表板</h2>
+      <div class="stat-grid" style="margin:8px 0 16px">
+        <div class="stat"><div class="num" id="d-open">0</div><div class="lbl">未結案</div></div>
+        <div class="stat"><div class="num" id="d-closed">0</div><div class="lbl">已結案</div></div>
+        <div class="stat"><div class="num" id="d-count">0</div><div class="lbl">案件總數</div></div>
+      </div>
+      <div class="amount-line">本期已通過請款總額：<b id="d-total">$0</b></div>
+
+      <h2 style="font-size:15px;margin:24px 0 8px">各建案明細</h2>
+      <div class="filterbar">
+        <div class="seg" id="d-seg"></div>
+        <input id="d-search" placeholder="🔍 搜尋建案名稱／地點" oninput="renderDash()" style="max-width:220px">
+        <select id="d-month" onchange="renderDash()" style="max-width:170px"></select>
+      </div>
+      <div id="d-detail"></div>
+
+      <hr style="border:none;border-top:1px solid #eef0f3;margin:20px 0">
+      <h2 style="font-size:15px;margin-bottom:6px">對帳與銀行匯出</h2>
+      <button class="btn btn-ghost" onclick="exportCSV()">⬇ 匯出對帳檔（CSV）</button>
+    </div>
+  </section>
+
+  <!-- 報表與儀表版 2（規格 4.8 延伸）— 給業主每月發薪用 -->
+  <section class="tab" id="tab-dash2">
+    <div class="card">
+      <h2>報表與儀表板</h2>
+      <div class="stat-grid" style="margin:8px 0 16px">
+        <div class="stat"><div class="num" id="v2-open">0</div><div class="lbl">未結案</div></div>
+        <div class="stat"><div class="num" id="v2-closed">0</div><div class="lbl">已結案</div></div>
+        <div class="stat"><div class="num" id="v2-cases">0</div><div class="lbl">案件總數</div></div>
+      </div>
+      <div class="amount-line">所選月份已通過請款總額：<b id="v2-total">$0</b>　共 <b id="v2-count">0</b> 筆</div>
+
+      <h2 style="font-size:15px;margin:24px 0 8px">請款記錄（依審核通過時間）</h2>
+      <div class="hint">取代各建案明細：僅列出「審核通過」的請款，依審核通過時間排序；月份以審核通過時間為準，方便每月對工人發薪。</div>
+      <div class="filterbar">
+        <select id="v2-month" onchange="renderDash2()" style="max-width:170px"></select>
+        <input id="v2-search" placeholder="🔍 搜尋師傅／建案" oninput="renderDash2()" style="max-width:220px">
+      </div>
+      <div id="v2-table" style="margin-top:12px"></div>
+
+      <hr style="border:none;border-top:1px solid #eef0f3;margin:20px 0">
+      <h2 style="font-size:15px;margin-bottom:6px">對帳與銀行匯出</h2>
+      <button class="btn btn-ghost" onclick="exportCSV2()">⬇ 匯出本月撥款檔（CSV）</button>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== 參照資料（示範用）===== */
+// users（規格 5.1）
+let USERS = [
+  { id:1, name:'張三', account:'chang', password:'1234',  role:'worker', status:'啟用', payee:'張三', bank_code:'822', bank_acct:'822123456789012' },
+  { id:2, name:'李四', account:'lee',   password:'1234',  role:'worker', status:'啟用', payee:'李四', bank_code:'700', bank_acct:'700098765432101' },
+  { id:3, name:'王五', account:'wang',  password:'1234',  role:'worker', status:'啟用', payee:'王五', bank_code:'013', bank_acct:'013112233445566' },
+  { id:9, name:'系統管理者', account:'admin', password:'admin', role:'admin', status:'啟用', payee:'', bank_code:'', bank_acct:'' },
+];
+let userSeq = 100;
+const ADMIN_ID = 9;
+const ROLE_LABEL = { worker:'師傅', admin:'最高管理者', third_party:'第三方' };
+function userName(id){ const u = USERS.find(u=>u.id===id); return u?u.name:('#'+id); }
+
+/* 登入守衛（由 index.html 以網址參數帶入 uid）*/
+const _uid = +new URLSearchParams(location.search).get('uid');
+const meAdmin = USERS.find(u=>u.id===_uid && u.role==='admin' && u.status==='啟用');
+if (!meAdmin) { location.href = 'index.html'; }   // 未登入 / 非管理者 → 回登入頁
+function initWho() { if (meAdmin) document.getElementById('whoName').textContent = meAdmin.name; }
+function logout() { location.href = 'index.html'; }
+// projects — 每個建案有名稱、地點、結案狀態（closed:true=已結案）
+let PROJECTS = [
+  { id:1, name:'建案A', code:'A-001', location:'台北市信義區', closed:false },
+  { id:2, name:'建案B', code:'B-002', location:'新北市板橋區', closed:false },
+  { id:3, name:'建案C', code:'C-003', location:'台中市西屯區', closed:true  },
+  { id:4, name:'建案D', code:'D-004', location:'桃園市中壢區', closed:false },
+  { id:5, name:'建案E', code:'E-005', location:'高雄市左營區', closed:false },
+];
+// 樓層固定顯示順序（地下一樓 → 五樓）
+const FLOOR_ORDER = ['地下一樓','一樓','二樓','三樓','四樓','五樓'];
+function floorRank(f){ const i = FLOOR_ORDER.indexOf(f); return i<0 ? 99 : i; }
+let projectSeq = 10;
+function projectName(id){ const p = PROJECTS.find(p=>p.id===id); return p?p.name:('#'+id); }
+// unit_prices（規格 5.3）— 工作項目簡化為「制式／客變」，依案名取單價；制式可預填標準數量，客變留空
+let UNIT_PRICES = [
+  { id:1,  project_id:1, spec_type:'制式', default_qty:10,   unit_price:800  },
+  { id:2,  project_id:1, spec_type:'客變', default_qty:null, unit_price:1200 },
+  { id:3,  project_id:2, spec_type:'制式', default_qty:8,    unit_price:900  },
+  { id:4,  project_id:2, spec_type:'客變', default_qty:null, unit_price:1300 },
+  { id:5,  project_id:3, spec_type:'制式', default_qty:10,   unit_price:850  },
+  { id:6,  project_id:3, spec_type:'客變', default_qty:null, unit_price:1250 },
+  { id:7,  project_id:4, spec_type:'制式', default_qty:12,   unit_price:950  },
+  { id:8,  project_id:4, spec_type:'客變', default_qty:null, unit_price:1400 },
+  { id:9,  project_id:5, spec_type:'制式', default_qty:6,    unit_price:1000 },
+  { id:10, project_id:5, spec_type:'客變', default_qty:null, unit_price:1500 },
+];
+let unitSeq = 100;
+const STATUS_LABEL = { pending:'待審核', approved:'已批准', rejected:'已駁回' };
+const TODAY = new Date().toISOString().slice(0,10);
+function nowTime(){ return new Date().toTimeString().slice(0,8); }
+function nowDateTime(){ const d=new Date(); return d.toISOString().slice(0,10)+' '+d.toTimeString().slice(0,8); }  // 年-月-日 時:分:秒
+
+/* 兩張交易資料表（記憶體模擬 DB）*/
+let billingSeq = 0, historySeq = 0;
+let billing_records = [];   // 規格 5.4
+let status_history  = [];   // 規格 5.5
+function addHistory(record_id, from_status, to_status, actor_id, note='') {
+  status_history.push({ id:++historySeq, record_id, from_status, to_status, actor_id, note, created_at:nowTime() });
+}
+
+/* 預植示範資料（讓審核流程有東西可演）*/
+function seed(worker_id, project_id, floor, spec_type, quantity, finalStatus, reason, reviewedAt) {
+  const u = UNIT_PRICES.find(x=>x.project_id===project_id && x.spec_type===spec_type);
+  const unit_price_snapshot = u.unit_price, amount = unit_price_snapshot*quantity;
+  const unique_key = `${project_id}｜${floor}｜${spec_type}｜${TODAY}`;
+  const dup = billing_records.some(r=>r.unique_key===unique_key && r.status!=='rejected');
+  const r = { id:++billingSeq, worker_id, project_id, floor, item_name:spec_type, spec_type, quantity,
+    unit_price_snapshot, amount, unique_key, status:'pending',
+    reviewed_by:null, reviewed_at:null, reject_reason:null,
+    submitted_at:(reviewedAt ? reviewedAt.slice(0,10) : TODAY), _suspect:dup };
+  billing_records.push(r);
+  addHistory(r.id, null, 'pending', worker_id, dup?'疑似重複':'');
+  if (finalStatus !== 'pending') {
+    r.status = finalStatus; r.reviewed_by = ADMIN_ID; r.reviewed_at = reviewedAt || (TODAY+' 10:00:00');
+    if (finalStatus==='rejected') r.reject_reason = reason;
+    addHistory(r.id, 'pending', finalStatus, ADMIN_ID, reason||'');
+  }
+}
+seed(1, 1, '二樓',     '制式', 10, 'approved', null, '2026-05-21 09:15:30');
+seed(1, 2, '三樓',     '制式', 8,  'pending');
+seed(2, 3, '一樓',     '制式', 5,  'pending');
+seed(2, 1, '二樓',     '制式', 10, 'pending');   // 與第 1 筆同 unique_key → 疑似重複
+seed(2, 4, '地下一樓', '客變', 3,  'rejected', '數量與現場不符，請重新確認', '2026-06-01 14:22:10');
+seed(3, 5, '四樓',     '客變', 6,  'approved', null, '2026-05-31 10:05:00');
+seed(3, 2, '五樓',     '制式', 8,  'approved', null, '2026-05-29 16:40:12');
+seed(1, 3, '二樓',     '客變', 4,  'approved', null, '2026-05-25 11:18:45');
+// 3 月已通過
+seed(1, 1, '一樓',     '制式', 10, 'approved', null, '2026-03-12 10:20:00');
+seed(2, 2, '一樓',     '制式', 8,  'approved', null, '2026-03-18 14:30:00');
+seed(3, 3, '三樓',     '客變', 4,  'approved', null, '2026-03-25 09:40:00');
+// 4 月已通過
+seed(1, 4, '一樓',     '制式', 12, 'approved', null, '2026-04-08 11:15:00');
+seed(2, 5, '二樓',     '制式', 6,  'approved', null, '2026-04-16 15:05:00');
+seed(3, 1, '三樓',     '客變', 5,  'approved', null, '2026-04-22 10:50:00');
+// 6 月已通過
+seed(1, 2, '二樓',     '客變', 3,  'approved', null, '2026-06-03 09:30:00');
+seed(2, 3, '四樓',     '制式', 5,  'approved', null, '2026-06-05 13:20:00');
+seed(3, 4, '二樓',     '制式', 12, 'approved', null, '2026-06-06 16:10:00');
+
+/* ===== 分頁 ===== */
+function showTab(id, btn) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if (id==='review') renderReview();
+  if (id==='all') renderAll();
+  if (id==='prices') renderPrices();
+  if (id==='users') renderUsers();
+  if (id==='dash') renderDash();
+  if (id==='dash2') renderDash2();
+}
+
+/* ===== 審核（規格 4.5）+ 寫入呈現 ===== */
+function isDup(r){ return billing_records.some(x => x.id!==r.id && x.unique_key===r.unique_key && x.status!=='rejected'); }
+function renderReview() {
+  const pend = billing_records.filter(r=>r.status==='pending');
+  const box = document.getElementById('review-table');
+  if (!pend.length) { box.innerHTML='<div class="empty">目前沒有待審核項目 🎉</div>'; return; }
+  let h = `<div class="bulkbar">
+      <label><input type="checkbox" id="chk-all" onchange="toggleAll(this.checked)"> 全選</label>
+      <span id="sel-count" class="sel-count">已選 0 筆</span><span style="flex:1"></span>
+      <button class="btn btn-sm btn-green" onclick="batchApprove()">批次批准</button>
+      <button class="btn btn-sm btn-red" onclick="batchReject()">批次退回</button>
+    </div>`;
+  h += `<table><thead><tr><th style="width:34px"></th><th>師傅</th><th>建案</th><th>樓層</th><th>規格</th><th>數量</th><th>金額</th><th>操作</th></tr></thead><tbody>`;
+  pend.forEach(r => {
+    const dup = isDup(r);
+    h += `<tr class="${dup?'dup':''}">
+      <td><input type="checkbox" class="rev-chk" value="${r.id}" onchange="updateSelCount()"></td>
+      <td>${userName(r.worker_id)}</td><td>${projectName(r.project_id)}</td><td>${r.floor}</td>
+      <td>${r.spec_type}${dup?'<span class="dup-flag">疑似重複</span>':''}</td>
+      <td>${r.quantity}</td><td>$${r.amount.toLocaleString()}</td>
+      <td><button class="btn btn-sm btn-green" onclick="approve(${r.id},${dup})">批准</button>
+          <button class="btn btn-sm btn-red" onclick="reject(${r.id})">退回</button></td></tr>`;
+  });
+  box.innerHTML = h + '</tbody></table>';
+  updateSelCount();
+}
+function selectedIds(){ return [...document.querySelectorAll('.rev-chk:checked')].map(c=>+c.value); }
+function updateSelCount(){
+  const total = document.querySelectorAll('.rev-chk').length, n = selectedIds().length;
+  const cnt = document.getElementById('sel-count'); if (cnt) cnt.textContent = '已選 '+n+' 筆';
+  const all = document.getElementById('chk-all'); if (all) all.checked = n>0 && n===total;
+}
+function toggleAll(on){ document.querySelectorAll('.rev-chk').forEach(c=>c.checked=on); updateSelCount(); }
+
+/* 狀態變更：更新狀態並記錄審核時間 */
+function setStatus(id, status, reason=null) {
+  const r = billing_records.find(x=>x.id===id);
+  const from = r.status;
+  r.status = status; r.reviewed_by = ADMIN_ID; r.reviewed_at = nowDateTime();
+  if (reason!==null) r.reject_reason = reason;
+  addHistory(r.id, from, status, ADMIN_ID, reason||'');
+}
+function approve(id, dup) {
+  const r = billing_records.find(x=>x.id===id);
+  const msg = dup
+    ? '此筆為「疑似重複」，確定仍要批准？\n\n'+approveSummary(r)
+    : '確認批准這筆請款？\n\n'+approveSummary(r);
+  if (!confirm(msg)) return;
+  setStatus(id, 'approved'); toast('已批准 1 筆'); renderReview();
+}
+function approveSummary(r){
+  return `師傅：${userName(r.worker_id)}\n建案：${projectName(r.project_id)}　${r.floor}\n規格：${r.spec_type}　數量：${r.quantity}\n金額：$${r.amount.toLocaleString()}`;
+}
+function reject(id) {
+  const reason = prompt('請填寫退回原因：', '');
+  if (reason===null) return;
+  setStatus(id, 'rejected', reason || '（未填寫）'); toast('已退回 1 筆'); renderReview();
+}
+function batchApprove() {
+  const ids = selectedIds();
+  if (!ids.length) return toast('請先勾選要批准的項目', true);
+  const dupN = ids.filter(id=>isDup(billing_records.find(r=>r.id===id))).length;
+  const msg = dupN
+    ? '所選 '+ids.length+' 筆中有 '+dupN+' 筆疑似重複，確定仍要全部批准？'
+    : '確認批准所選 '+ids.length+' 筆請款？';
+  if (!confirm(msg)) return;
+  ids.forEach(id=>setStatus(id,'approved')); toast('已批准 '+ids.length+' 筆'); renderReview();
+}
+function batchReject() {
+  const ids = selectedIds();
+  if (!ids.length) return toast('請先勾選要退回的項目', true);
+  const reason = prompt('請填寫退回原因（套用至所選 '+ids.length+' 筆）：', '');
+  if (reason===null) return;
+  ids.forEach(id=>setStatus(id,'rejected', reason||'（未填寫）')); toast('已退回 '+ids.length+' 筆'); renderReview();
+}
+
+/* ===== 全部請款 ===== */
+let allFilter = 'all';
+function setAllFilter(f){ allFilter=f; renderAll(); }
+function renderAll() {
+  const map = { all:'全部', pending:'待審核', approved:'已批准', rejected:'已駁回' };
+  document.getElementById('all-filter').innerHTML = Object.entries(map).map(([k,v])=>{
+    const n = k==='all'?billing_records.length:billing_records.filter(r=>r.status===k).length;
+    return `<button class="btn btn-sm ${allFilter===k?'':'btn-ghost'}" onclick="setAllFilter('${k}')">${v}（${n}）</button>`;
+  }).join('');
+  const rows = allFilter==='all'?billing_records:billing_records.filter(r=>r.status===allFilter);
+  if (!rows.length) { document.getElementById('all-table').innerHTML='<div class="empty">無資料</div>'; return; }
+  let h = `<table><thead><tr><th>師傅</th><th>建案</th><th>樓層</th><th>規格</th><th>數量</th><th>金額</th><th>狀態</th><th>提交日期</th></tr></thead><tbody>`;
+  rows.forEach(r => {
+    h += `<tr><td>${userName(r.worker_id)}</td><td>${projectName(r.project_id)}</td><td>${r.floor}</td><td>${r.spec_type}</td>
+      <td>${r.quantity}</td><td>$${r.amount.toLocaleString()}</td><td><span class="badge ${r.status}">${STATUS_LABEL[r.status]}</span></td><td>${r.submitted_at}</td></tr>`;
+  });
+  document.getElementById('all-table').innerHTML = h + '</tbody></table>';
+}
+
+/* ===== 專案／單價（規格 4.6 / 5.2 / 5.3）===== */
+let expandedPrice = new Set();   // 記住已展開單價設定的建案
+function renderPrices() {
+  let h = `<table><thead><tr>
+      <th>建案</th><th>地點</th><th>案號</th><th>規格項目數</th><th>結案狀態</th>
+      <th style="width:90px;text-align:right">單價設定</th></tr></thead><tbody>`;
+  PROJECTS.forEach(p => {
+    const open = expandedPrice.has(p.id);
+    const cnt = UNIT_PRICES.filter(x=>x.project_id===p.id).length;
+    h += `<tr class="grp" style="cursor:pointer" onclick="togglePrice(${p.id})">
+      <td><b>${p.name}</b></td>
+      <td>${p.location||'—'}</td>
+      <td>${p.code||'—'}</td>
+      <td>${cnt}</td>
+      <td><button class="btn btn-sm ${p.closed?'btn-green':'btn-ghost'}" onclick="event.stopPropagation();toggleClosed(${p.id});renderPrices()">${p.closed?'已結案':'未結案'}</button></td>
+      <td style="text-align:right"><span id="pcaret-${p.id}">${open?'收合 ▾':'展開 ▸'}</span></td></tr>`;
+    h += `<tr class="detail" id="pdetail-${p.id}" style="display:${open?'table-row':'none'}"><td colspan="6" style="background:#faf9ff">${priceDetailHTML(p.id)}</td></tr>`;
+  });
+  document.getElementById('proj-list').innerHTML = h + '</tbody></table>';
+}
+// 單一建案的單價設定（可直接編輯 + 新增規格）
+function priceDetailHTML(pid) {
+  const rows = UNIT_PRICES.filter(u=>u.project_id===pid);
+  let t;
+  if (!rows.length) {
+    t = `<div class="empty" style="padding:12px">此建案尚無單價設定，請於下方新增規格</div>`;
+  } else {
+    t = `<table style="margin:6px 0"><thead><tr><th>規格</th><th>單價</th><th>制式預填數量</th><th>操作</th></tr></thead><tbody>`;
+    rows.forEach(u=>{
+      const qtyCell = u.spec_type==='制式'
+        ? `<input type="number" min="0" value="${u.default_qty??''}" style="width:90px;padding:5px 8px" onchange="editQty(${u.id},this.value)">`
+        : '—';
+      t += `<tr><td>${u.spec_type}</td>
+        <td><input type="number" value="${u.unit_price}" style="width:110px;padding:5px 8px" onchange="editPrice(${u.id},this.value)"></td>
+        <td>${qtyCell}</td>
+        <td><button class="btn btn-sm btn-red" onclick="delPrice(${u.id})">刪除</button></td></tr>`;
+    });
+    t += `</tbody></table>`;
+  }
+  t += `<div class="demo-note" style="margin-top:10px">為此建案新增／更新規格單價</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+      <div><label>規格</label><select id="up-spec-${pid}" style="width:120px"><option>制式</option><option>客變</option></select></div>
+      <div><label>單價</label><input type="number" id="up-price-${pid}" min="0" placeholder="例：800" style="width:120px"></div>
+      <div><label>制式預填數量</label><input type="number" id="up-qty-${pid}" min="0" placeholder="選填" style="width:120px"></div>
+      <button class="btn btn-sm" onclick="addUnitPrice(${pid})">＋ 新增規格</button>
+    </div>`;
+  return t;
+}
+function togglePrice(pid){
+  const d=document.getElementById('pdetail-'+pid), c=document.getElementById('pcaret-'+pid);
+  if(!d) return;
+  const show = d.style.display==='none';
+  d.style.display = show?'table-row':'none';
+  if(c) c.textContent = show?'收合 ▾':'展開 ▸';
+  if(show) expandedPrice.add(pid); else expandedPrice.delete(pid);
+}
+function addProject(){
+  const name = document.getElementById('np-name').value.trim();
+  const location = document.getElementById('np-loc').value.trim();
+  if (!name) return toast('請輸入建案名稱',true);
+  if (PROJECTS.some(p=>p.name===name)) return toast('建案名稱已存在',true);
+  PROJECTS.push({ id:++projectSeq, name, code:'', location, closed:false });
+  document.getElementById('np-name').value=''; document.getElementById('np-loc').value='';
+  expandedPrice.add(projectSeq);   // 新建案自動展開，方便立即設定單價
+  renderPrices(); toast('已新增建案：'+name);
+}
+function editPrice(id,v){ const u=UNIT_PRICES.find(x=>x.id===id); if(u) u.unit_price=+v||0; toast('單價已更新（僅影響日後新請款）'); }
+function editQty(id,v){ const u=UNIT_PRICES.find(x=>x.id===id); if(u) u.default_qty=(v===''?null:+v||0); toast('制式預填數量已更新'); }
+function delPrice(id){ if(!confirm('確定刪除此單價項目？'))return; const i=UNIT_PRICES.findIndex(x=>x.id===id); if(i>=0) UNIT_PRICES.splice(i,1); renderPrices(); }
+function addUnitPrice(project_id){
+  const spec_type=document.getElementById('up-spec-'+project_id).value;
+  const unit_price=+document.getElementById('up-price-'+project_id).value;
+  const qtyRaw=document.getElementById('up-qty-'+project_id).value;
+  if (!unit_price) return toast('請填寫單價',true);
+  const default_qty = spec_type==='制式' ? (qtyRaw===''?null:+qtyRaw) : null;  // 客變不預填
+  const exist = UNIT_PRICES.find(u=>u.project_id===project_id && u.spec_type===spec_type);
+  if (exist){ exist.unit_price=unit_price; exist.default_qty=default_qty; toast('已更新單價（'+projectName(project_id)+'／'+spec_type+'）'); }
+  else { UNIT_PRICES.push({ id:++unitSeq, project_id, spec_type, default_qty, unit_price }); toast('已新增單價'); }
+  expandedPrice.add(project_id);   // 保持此建案展開
+  renderPrices();
+}
+
+/* ===== 使用者管理（規格 5.1）===== */
+let editingUserId = null;   // null=新增模式；否則為編輯中的 user id
+function renderUsers() {
+  let h = `<table><thead><tr><th>姓名</th><th>帳號</th><th>密碼</th><th>角色</th><th>收款銀行代號</th><th>收款帳號</th><th>狀態</th><th>操作</th></tr></thead><tbody>`;
+  USERS.forEach(u=>{ h += `<tr><td>${u.name}</td><td>${u.account}</td><td>${'•'.repeat((u.password||'').length||4)}</td><td>${ROLE_LABEL[u.role]}</td>
+    <td>${u.bank_code||'—'}</td><td>${u.bank_acct||'—'}</td>
+    <td><span class="badge ${u.status==='啟用'?'approved':'rejected'}">${u.status}</span></td>
+    <td><button class="btn btn-sm btn-ghost" onclick="editUser(${u.id})">編輯</button>
+        <button class="btn btn-sm btn-ghost" onclick="toggleUser(${u.id})">${u.status==='啟用'?'停用':'啟用'}</button></td></tr>`; });
+  document.getElementById('user-table').innerHTML = h + '</tbody></table>';
+}
+function getUserForm(){
+  return {
+    name:  document.getElementById('nu-name').value.trim(),
+    account: document.getElementById('nu-acct').value.trim(),
+    password: document.getElementById('nu-pwd').value.trim(),
+    role:  document.getElementById('nu-role').value,
+  };
+}
+function clearUserForm(){
+  ['nu-name','nu-acct','nu-pwd'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nu-role').value='worker';
+}
+function submitUser(){
+  const f = getUserForm();
+  if (!f.name||!f.account||!f.password) return toast('請填寫姓名、帳號與密碼',true);
+  // 帳號唯一性檢查（排除自己）
+  if (USERS.some(u=>u.account===f.account && u.id!==editingUserId)) return toast('帳號已存在',true);
+  if (editingUserId){
+    // 僅更新帳號相關欄位；收款資料由師傅自填，不在此覆寫
+    const u = USERS.find(x=>x.id===editingUserId);
+    Object.assign(u, { name:f.name, account:f.account, password:f.password, role:f.role });
+    toast('已更新使用者：'+f.name); cancelEditUser();
+  } else {
+    // 新使用者的收款資料留空，待師傅於「我的收款資料」自行填寫
+    USERS.push({ id:++userSeq, name:f.name, account:f.account, password:f.password, role:f.role,
+      status:'啟用', payee:'', bank_code:'', bank_acct:'' });
+    toast('已新增使用者：'+f.name); clearUserForm();
+  }
+  renderUsers();
+}
+function editUser(id){
+  const u = USERS.find(x=>x.id===id); if(!u) return;
+  editingUserId = id;
+  document.getElementById('nu-name').value = u.name;
+  document.getElementById('nu-acct').value = u.account;
+  document.getElementById('nu-pwd').value  = u.password||'';
+  document.getElementById('nu-role').value = u.role;
+  document.getElementById('nu-title').textContent = '編輯使用者：'+u.name;
+  document.getElementById('nu-submit').textContent = '✓ 更新使用者';
+  document.getElementById('nu-cancel').style.display = '';
+  document.getElementById('nu-name').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function cancelEditUser(){
+  editingUserId = null;
+  clearUserForm();
+  document.getElementById('nu-title').textContent = '新增使用者（帳號／密碼由管理者登打）';
+  document.getElementById('nu-submit').textContent = '＋ 新增使用者';
+  document.getElementById('nu-cancel').style.display = 'none';
+}
+function toggleUser(id){ const u=USERS.find(u=>u.id===id); u.status=u.status==='啟用'?'停用':'啟用'; renderUsers(); }
+
+/* ===== 報表儀表板（版 1）===== */
+function monthOf(dt){ return dt ? dt.slice(0,7) : ''; }   // YYYY-MM
+function approvedMonths(){
+  return [...new Set(billing_records.filter(r=>r.status==='approved'&&r.reviewed_at).map(r=>monthOf(r.reviewed_at)))].sort().reverse();
+}
+function fillMonthSelect(sel, withAll){
+  const cur = sel.value, months = approvedMonths();
+  sel.innerHTML = (withAll?'<option value="all">全部月份</option>':'') + months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  if (cur && [...sel.options].some(o=>o.value===cur)) sel.value = cur;
+  else if (!withAll && months.length) sel.value = months[0];
+}
+let dashSeg = 'all';   // all | open | closed
+let expandedProjects = new Set();   // 記住已展開的建案，重畫時還原
+function setDashSeg(s){ dashSeg = s; renderDash(); }
+function renderDash() {
+  const monthSel = document.getElementById('d-month');
+  if (!monthSel.dataset.ready){ fillMonthSelect(monthSel, true); monthSel.dataset.ready='1'; }
+  document.getElementById('d-seg').innerHTML = [['all','全部'],['open','未結案'],['closed','已結案']]
+    .map(([k,v])=>`<button class="${dashSeg===k?'on':''}" onclick="setDashSeg('${k}')">${v}</button>`).join('');
+  // 上方統計：案件數（未結案／已結案／總數）
+  document.getElementById('d-open').textContent   = PROJECTS.filter(p=>!p.closed).length;
+  document.getElementById('d-closed').textContent = PROJECTS.filter(p=>p.closed).length;
+  document.getElementById('d-count').textContent  = PROJECTS.length;
+
+  const month = monthSel.value, kw = document.getElementById('d-search').value.trim();
+  let projs = PROJECTS.slice();
+  if (dashSeg==='open')   projs = projs.filter(p=>!p.closed);
+  if (dashSeg==='closed') projs = projs.filter(p=>p.closed);
+  if (kw) projs = projs.filter(p=>p.name.includes(kw) || (p.location||'').includes(kw));
+  const apprOf = pid => billing_records.filter(r=>r.status==='approved' && r.project_id===pid && (month==='all'||monthOf(r.reviewed_at)===month))
+    .sort((a,b)=>floorRank(a.floor)-floorRank(b.floor));
+
+  let grandTotal = 0;
+  let dh = `<table><thead><tr>
+      <th style="width:34px"><input type="checkbox" id="exp-all" checked onchange="toggleExpAll(this.checked)"></th>
+      <th>建案</th><th>地點</th><th>狀態</th><th style="text-align:right">已通過總額</th><th style="width:90px;text-align:right">明細</th></tr></thead><tbody>`;
+  if (!projs.length) dh += `<tr><td colspan="6" class="empty">查無符合條件的建案</td></tr>`;
+  projs.forEach(p => {
+    const rows = apprOf(p.id);
+    const sub = rows.reduce((s,r)=>s+r.amount,0); grandTotal += sub;
+    const open = expandedProjects.has(p.id);
+    dh += `<tr class="grp" style="cursor:pointer" onclick="toggleProject(${p.id})">
+      <td><input type="checkbox" class="exp-proj" value="${p.id}" checked onclick="event.stopPropagation();syncExpAll()"></td>
+      <td><b>${p.name}</b></td>
+      <td>${p.location||'—'}</td>
+      <td><button class="btn btn-sm ${p.closed?'btn-green':'btn-ghost'}" onclick="event.stopPropagation();toggleClosed(${p.id});renderDash()">${p.closed?'已結案':'未結案'}</button></td>
+      <td style="text-align:right"><b>$${sub.toLocaleString()}</b></td>
+      <td style="text-align:right"><span id="caret-${p.id}">${open?'收合 ▾':'展開 ▸'}</span></td></tr>`;
+    let inner;
+    if (!rows.length) {
+      inner = `<div class="empty" style="padding:14px">此建案在所選條件下沒有已通過的請款</div>`;
+    } else {
+      inner = `<table style="margin:6px 0"><thead><tr><th>審核通過時間</th><th>員工</th><th>樓層</th><th>規格</th><th>數量</th><th>單價</th><th>總額</th><th>狀態</th></tr></thead><tbody>`;
+      rows.forEach(r => {
+        inner += `<tr><td>${r.reviewed_at||'—'}</td><td>${userName(r.worker_id)}</td>
+          <td>${r.floor}</td><td>${r.spec_type}</td><td>${r.quantity}</td>
+          <td>$${r.unit_price_snapshot.toLocaleString()}</td><td>$${r.amount.toLocaleString()}</td>
+          <td><span class="badge approved">已通過</span></td></tr>`;
+      });
+      inner += `<tr class="subtotal"><td colspan="6" style="text-align:right">小計</td><td>$${sub.toLocaleString()}</td><td></td></tr></tbody></table>`;
+    }
+    dh += `<tr class="detail" id="detail-${p.id}" style="display:${open?'table-row':'none'}"><td colspan="6" style="background:#faf9ff">${inner}</td></tr>`;
+  });
+  document.getElementById('d-detail').innerHTML = dh + '</tbody></table>';
+  document.getElementById('d-total').textContent = '$'+grandTotal.toLocaleString();
+}
+
+/* ===== 報表與儀表版 2（依審核通過時間，給業主每月發薪）===== */
+let dash2Ready = false;
+function renderDash2() {
+  const sel = document.getElementById('v2-month');
+  if (!dash2Ready){ fillMonthSelect(sel, true); dash2Ready=true; }
+  // 上方統計卡（與版 1 一致：案件數）
+  document.getElementById('v2-open').textContent   = PROJECTS.filter(p=>!p.closed).length;
+  document.getElementById('v2-closed').textContent = PROJECTS.filter(p=>p.closed).length;
+  document.getElementById('v2-cases').textContent  = PROJECTS.length;
+  const month = sel.value, kw = document.getElementById('v2-search').value.trim();
+  let recs = dash2Records(month, kw);
+  const total = recs.reduce((s,r)=>s+r.amount,0);
+  document.getElementById('v2-total').textContent = '$'+total.toLocaleString();
+  document.getElementById('v2-count').textContent = recs.length;
+  if (!recs.length){ document.getElementById('v2-table').innerHTML='<div class="empty">所選月份沒有已通過的請款</div>'; return; }
+  let h = `<table><thead><tr><th>申請時間</th><th>審核通過時間</th><th>員工</th><th>建案</th><th>樓層</th><th>規格</th><th>數量</th><th>單價</th><th>金額</th></tr></thead><tbody>`;
+  recs.forEach(r => {
+    h += `<tr><td>${r.submitted_at||'—'}</td><td>${r.reviewed_at||'—'}</td><td>${userName(r.worker_id)}</td>
+      <td>${projectName(r.project_id)}</td><td>${r.floor}</td><td>${r.spec_type}</td>
+      <td>${r.quantity}</td><td>$${r.unit_price_snapshot.toLocaleString()}</td><td>$${r.amount.toLocaleString()}</td></tr>`;
+  });
+  document.getElementById('v2-table').innerHTML = h + '</tbody></table>';
+}
+function dash2Records(month, kw){   // 已通過、依審核通過時間（新→舊）排序，並以通過時間做月份篩選
+  let recs = billing_records.filter(r=>r.status==='approved' && r.reviewed_at && (!month || month==='all' || monthOf(r.reviewed_at)===month));
+  if (kw) recs = recs.filter(r=>userName(r.worker_id).includes(kw) || projectName(r.project_id).includes(kw));
+  return recs.sort((a,b)=>(b.reviewed_at||'').localeCompare(a.reviewed_at||''));
+}
+function toggleProject(pid){
+  const d = document.getElementById('detail-'+pid), c = document.getElementById('caret-'+pid);
+  if (!d) return;
+  const show = d.style.display==='none';
+  d.style.display = show ? 'table-row' : 'none';
+  if (c) c.textContent = show ? '收合 ▾' : '展開 ▸';
+  if (show) expandedProjects.add(pid); else expandedProjects.delete(pid);
+}
+function toggleClosed(pid){
+  const p = PROJECTS.find(x=>x.id===pid); if(!p) return;
+  p.closed = !p.closed;
+}
+function toggleExpAll(on){ document.querySelectorAll('.exp-proj').forEach(c=>c.checked=on); }
+function syncExpAll(){ const b=[...document.querySelectorAll('.exp-proj')], a=document.getElementById('exp-all'); if(a) a.checked = b.length>0 && b.every(c=>c.checked); }
+
+/* ===== 對帳匯出（規格 4.7）===== */
+// 規格 4.7：撥款日期／建案-幾樓／收款人戶名／收款銀行代號／收款帳號／交易金額（NTD）
+function bankInfo(worker_id){ const u = USERS.find(x=>x.id===worker_id)||{}; return { payee:u.payee||u.name||'', code:u.bank_code||'', acct:u.bank_acct||'' }; }
+function csvCell(v){ const s=String(v??''); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+function buildPayoutCSV(records, payoutDate){
+  const head = ['撥款日期','建案/幾樓','收款人戶名','收款銀行代號','收款帳號','交易金額（NTD）'];
+  const rows = records.map(r=>{
+    const b = bankInfo(r.worker_id);
+    return [payoutDate, projectName(r.project_id)+' '+r.floor, b.payee, b.code, b.acct, r.amount];
+  });
+  return '﻿' + [head,...rows].map(a=>a.map(csvCell).join(',')).join('\r\n');
+}
+function downloadCSV(csv, filename){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download = filename; a.click();
+}
+function exportCSV() {   // 版 1：依勾選建案 + 目前月份篩選
+  const checked = [...document.querySelectorAll('.exp-proj:checked')].map(c=>+c.value);
+  if (!checked.length) return toast('請至少勾選一個建案',true);
+  const month = document.getElementById('d-month').value;
+  const recs = billing_records.filter(r=>r.status==='approved' && checked.includes(r.project_id) && (month==='all'||monthOf(r.reviewed_at)===month));
+  if (!recs.length) return toast('所勾選建案沒有可匯出的已通過請款',true);
+  downloadCSV(buildPayoutCSV(recs, TODAY), '永豐銀行撥款檔_'+TODAY+'.csv');
+  toast('已匯出撥款 CSV（'+recs.length+' 筆）');
+}
+function exportCSV2() {   // 版 2：依所選月份（以審核通過時間為準）
+  const month = document.getElementById('v2-month').value;
+  const kw = document.getElementById('v2-search').value.trim();
+  const recs = dash2Records(month, kw);
+  if (!recs.length) return toast('所選月份沒有可匯出的請款',true);
+  downloadCSV(buildPayoutCSV(recs, TODAY), '撥款檔_'+(month && month!=='all' ? month : '全部')+'.csv');
+  toast('已匯出撥款 CSV（'+recs.length+' 筆）');
+}
+
+/* ===== 共用 ===== */
+let toastTimer;
+function toast(msg, warn=false){
+  const t = document.getElementById('toast'); t.textContent = msg; t.className='toast show'+(warn?' warn':'');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.className='toast', 2800);
+}
+
+/* 啟動 */
+initWho();
+renderReview();
+</script>
+</body>
+</html>
