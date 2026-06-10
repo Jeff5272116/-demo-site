@@ -134,7 +134,11 @@
           <select id="nu-role"><option value="worker">師傅</option><option value="admin">最高管理者</option><option value="third_party">第三方</option></select>
         </div>
       </div>
-      <div class="hint" style="margin-bottom:14px">收款銀行代號／帳號由師傅於「我的收款資料」自行填寫，管理者不需代打。</div>
+      <div class="grid2">
+        <div class="field"><label>收款銀行代號</label><input id="nu-code" placeholder="例：822"></div>
+        <div class="field"><label>收款帳號</label><input id="nu-acctno" placeholder="例：822123456789012"></div>
+      </div>
+      <div class="hint" style="margin-bottom:14px">收款銀行代號／帳號可由管理者代打，師傅也能於「我的收款資料」自行修改。</div>
       <button class="btn btn-sm" id="nu-submit" onclick="submitUser()">＋ 新增使用者</button>
       <button class="btn btn-sm btn-ghost" id="nu-cancel" style="display:none" onclick="cancelEditUser()">取消編輯</button>
     </div>
@@ -225,18 +229,13 @@ const FLOOR_ORDER = ['地下一樓','一樓','二樓','三樓','四樓','五樓'
 function floorRank(f){ const i = FLOOR_ORDER.indexOf(f); return i<0 ? 99 : i; }
 let projectSeq = 10;
 function projectName(id){ const p = PROJECTS.find(p=>p.id===id); return p?p.name:('#'+id); }
-// unit_prices（規格 5.3）— 工作項目簡化為「制式／客變」，依案名取單價；制式可預填標準數量，客變留空
+// unit_prices（規格 5.3）— 後台只設定「制式」單價（含標準數量）；客變單價由師傅於請款時逐案自填
 let UNIT_PRICES = [
-  { id:1,  project_id:1, spec_type:'制式', default_qty:10,   unit_price:800  },
-  { id:2,  project_id:1, spec_type:'客變', default_qty:null, unit_price:1200 },
-  { id:3,  project_id:2, spec_type:'制式', default_qty:8,    unit_price:900  },
-  { id:4,  project_id:2, spec_type:'客變', default_qty:null, unit_price:1300 },
-  { id:5,  project_id:3, spec_type:'制式', default_qty:10,   unit_price:850  },
-  { id:6,  project_id:3, spec_type:'客變', default_qty:null, unit_price:1250 },
-  { id:7,  project_id:4, spec_type:'制式', default_qty:12,   unit_price:950  },
-  { id:8,  project_id:4, spec_type:'客變', default_qty:null, unit_price:1400 },
-  { id:9,  project_id:5, spec_type:'制式', default_qty:6,    unit_price:1000 },
-  { id:10, project_id:5, spec_type:'客變', default_qty:null, unit_price:1500 },
+  { id:1,  project_id:1, spec_type:'制式', default_qty:10, unit_price:800  },
+  { id:3,  project_id:2, spec_type:'制式', default_qty:8,  unit_price:900  },
+  { id:5,  project_id:3, spec_type:'制式', default_qty:10, unit_price:850  },
+  { id:7,  project_id:4, spec_type:'制式', default_qty:12, unit_price:950  },
+  { id:9,  project_id:5, spec_type:'制式', default_qty:6,  unit_price:1000 },
 ];
 let unitSeq = 100;
 const STATUS_LABEL = { pending:'待審核', approved:'已批准', rejected:'已駁回' };
@@ -253,9 +252,10 @@ function addHistory(record_id, from_status, to_status, actor_id, note='') {
 }
 
 /* 預植示範資料（讓審核流程有東西可演）*/
-function seed(worker_id, project_id, floor, spec_type, quantity, finalStatus, reason, reviewedAt, submittedAt) {
+function seed(worker_id, project_id, floor, spec_type, quantity, finalStatus, reason, reviewedAt, submittedAt, unitPrice) {
   const u = UNIT_PRICES.find(x=>x.project_id===project_id && x.spec_type===spec_type);
-  const unit_price_snapshot = u.unit_price, amount = unit_price_snapshot*quantity;
+  // 制式：取後台單價；客變：用呼叫端帶入的逐案單價
+  const unit_price_snapshot = unitPrice!=null ? unitPrice : (u ? u.unit_price : 0), amount = unit_price_snapshot*quantity;
   const unique_key = `${project_id}｜${floor}｜${spec_type}｜${TODAY}`;
   const dup = billing_records.some(r=>r.unique_key===unique_key && r.status!=='rejected');
   // 申請日：優先用 submittedAt；否則退回審核日當天（pending 則用今天）
@@ -277,20 +277,20 @@ seed(1, 1, '二樓',     '制式', 10, 'approved', null, '2026-05-21 09:15:30', 
 seed(1, 2, '三樓',     '制式', 8,  'pending');
 seed(2, 3, '一樓',     '制式', 5,  'pending');
 seed(2, 1, '二樓',     '制式', 10, 'pending');   // 與第 1 筆同 unique_key → 疑似重複
-seed(2, 4, '地下一樓', '客變', 3,  'rejected', '數量與現場不符，請重新確認', '2026-06-01 14:22:10');
-seed(3, 5, '四樓',     '客變', 6,  'approved', null, '2026-05-31 10:05:00', '2026-05-27');  // 同月、相差數天
+seed(2, 4, '地下一樓', '客變', 3,  'rejected', '數量與現場不符，請重新確認', '2026-06-01 14:22:10', undefined, 1400);
+seed(3, 5, '四樓',     '客變', 6,  'approved', null, '2026-05-31 10:05:00', '2026-05-27', 1500);  // 同月、相差數天
 seed(3, 2, '五樓',     '制式', 8,  'approved', null, '2026-05-29 16:40:12');                 // 同日（預設）
-seed(1, 3, '二樓',     '客變', 4,  'approved', null, '2026-05-25 11:18:45');
+seed(1, 3, '二樓',     '客變', 4,  'approved', null, '2026-05-25 11:18:45', undefined, 1250);
 // 3 月已通過
 seed(1, 1, '一樓',     '制式', 10, 'approved', null, '2026-03-12 10:20:00', '2026-02-27');  // 2月申請→3月過審
 seed(2, 2, '一樓',     '制式', 8,  'approved', null, '2026-03-18 14:30:00');
-seed(3, 3, '三樓',     '客變', 4,  'approved', null, '2026-03-25 09:40:00');
+seed(3, 3, '三樓',     '客變', 4,  'approved', null, '2026-03-25 09:40:00', undefined, 1250);
 // 4 月已通過
 seed(1, 4, '一樓',     '制式', 12, 'approved', null, '2026-04-08 11:15:00', '2026-03-30');  // 3月申請→4月過審
 seed(2, 5, '二樓',     '制式', 6,  'approved', null, '2026-04-16 15:05:00');
-seed(3, 1, '三樓',     '客變', 5,  'approved', null, '2026-04-22 10:50:00');
+seed(3, 1, '三樓',     '客變', 5,  'approved', null, '2026-04-22 10:50:00', undefined, 1200);
 // 6 月已通過
-seed(1, 2, '二樓',     '客變', 3,  'approved', null, '2026-06-03 09:30:00', '2026-05-30');  // 5月申請→6月過審
+seed(1, 2, '二樓',     '客變', 3,  'approved', null, '2026-06-03 09:30:00', '2026-05-30', 1300);  // 5月申請→6月過審
 seed(2, 3, '四樓',     '制式', 5,  'approved', null, '2026-06-05 13:20:00');
 seed(3, 4, '二樓',     '制式', 12, 'approved', null, '2026-06-06 16:10:00');
 
@@ -407,16 +407,16 @@ function renderAll() {
 let expandedPrice = new Set();   // 記住已展開單價設定的建案
 function renderPrices() {
   let h = `<table><thead><tr>
-      <th>建案</th><th>地點</th><th>案號</th><th>規格項目數</th><th>結案狀態</th>
+      <th>建案</th><th>地點</th><th>案號</th><th>制式單價</th><th>結案狀態</th>
       <th style="width:90px;text-align:right">單價設定</th></tr></thead><tbody>`;
   PROJECTS.forEach(p => {
     const open = expandedPrice.has(p.id);
-    const cnt = UNIT_PRICES.filter(x=>x.project_id===p.id).length;
+    const std = UNIT_PRICES.find(x=>x.project_id===p.id && x.spec_type==='制式');
     h += `<tr class="grp" style="cursor:pointer" onclick="togglePrice(${p.id})">
       <td><b>${p.name}</b></td>
       <td>${p.location||'—'}</td>
       <td>${p.code||'—'}</td>
-      <td>${cnt}</td>
+      <td>${std?'$'+std.unit_price.toLocaleString():'—'}</td>
       <td><button class="btn btn-sm ${p.closed?'btn-green':'btn-ghost'}" onclick="event.stopPropagation();toggleClosed(${p.id});renderPrices()">${p.closed?'已結案':'未結案'}</button></td>
       <td style="text-align:right"><span id="pcaret-${p.id}">${open?'收合 ▾':'展開 ▸'}</span></td></tr>`;
     h += `<tr class="detail" id="pdetail-${p.id}" style="display:${open?'table-row':'none'}"><td colspan="6" style="background:#faf9ff">${priceDetailHTML(p.id)}</td></tr>`;
@@ -425,31 +425,22 @@ function renderPrices() {
 }
 // 單一建案的單價設定（可直接編輯 + 新增規格）
 function priceDetailHTML(pid) {
-  const rows = UNIT_PRICES.filter(u=>u.project_id===pid);
-  let t;
-  if (!rows.length) {
-    t = `<div class="empty" style="padding:12px">此建案尚無單價設定，請於下方新增規格</div>`;
-  } else {
-    t = `<table style="margin:6px 0"><thead><tr><th>規格</th><th>單價</th><th>制式預填數量</th><th>操作</th></tr></thead><tbody>`;
-    rows.forEach(u=>{
-      const qtyCell = u.spec_type==='制式'
-        ? `<input type="number" min="0" value="${u.default_qty??''}" style="width:90px;padding:5px 8px" onchange="editQty(${u.id},this.value)">`
-        : '—';
-      t += `<tr><td>${u.spec_type}</td>
+  // 簡化：僅管理「制式」單價與數量（客變不在此設定）
+  const u = UNIT_PRICES.find(x=>x.project_id===pid && x.spec_type==='制式');
+  if (u) {
+    return `<table style="margin:6px 0"><thead><tr><th>規格</th><th>單價</th><th>制式預填數量</th></tr></thead><tbody>
+      <tr><td>制式</td>
         <td><input type="number" value="${u.unit_price}" style="width:110px;padding:5px 8px" onchange="editPrice(${u.id},this.value)"></td>
-        <td>${qtyCell}</td>
-        <td><button class="btn btn-sm btn-red" onclick="delPrice(${u.id})">刪除</button></td></tr>`;
-    });
-    t += `</tbody></table>`;
+        <td><input type="number" min="0" value="${u.default_qty??''}" style="width:90px;padding:5px 8px" onchange="editQty(${u.id},this.value)"></td></tr>
+      </tbody></table>`;
   }
-  t += `<div class="demo-note" style="margin-top:10px">為此建案新增／更新規格單價</div>
+  // 尚未設定制式單價（如新建案）
+  return `<div class="demo-note" style="margin-top:10px">設定此建案的制式單價</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-      <div><label>規格</label><select id="up-spec-${pid}" style="width:120px"><option>制式</option><option>客變</option></select></div>
       <div><label>單價</label><input type="number" id="up-price-${pid}" min="0" placeholder="例：800" style="width:120px"></div>
       <div><label>制式預填數量</label><input type="number" id="up-qty-${pid}" min="0" placeholder="選填" style="width:120px"></div>
-      <button class="btn btn-sm" onclick="addUnitPrice(${pid})">＋ 新增規格</button>
+      <button class="btn btn-sm" onclick="addUnitPrice(${pid})">＋ 設定制式單價</button>
     </div>`;
-  return t;
 }
 function togglePrice(pid){
   const d=document.getElementById('pdetail-'+pid), c=document.getElementById('pcaret-'+pid);
@@ -473,14 +464,14 @@ function editPrice(id,v){ const u=UNIT_PRICES.find(x=>x.id===id); if(u) u.unit_p
 function editQty(id,v){ const u=UNIT_PRICES.find(x=>x.id===id); if(u) u.default_qty=(v===''?null:+v||0); toast('制式預填數量已更新'); }
 function delPrice(id){ if(!confirm('確定刪除此單價項目？'))return; const i=UNIT_PRICES.findIndex(x=>x.id===id); if(i>=0) UNIT_PRICES.splice(i,1); renderPrices(); }
 function addUnitPrice(project_id){
-  const spec_type=document.getElementById('up-spec-'+project_id).value;
+  const spec_type='制式';   // 簡化後僅設定制式單價
   const unit_price=+document.getElementById('up-price-'+project_id).value;
   const qtyRaw=document.getElementById('up-qty-'+project_id).value;
   if (!unit_price) return toast('請填寫單價',true);
-  const default_qty = spec_type==='制式' ? (qtyRaw===''?null:+qtyRaw) : null;  // 客變不預填
+  const default_qty = qtyRaw===''?null:+qtyRaw;
   const exist = UNIT_PRICES.find(u=>u.project_id===project_id && u.spec_type===spec_type);
-  if (exist){ exist.unit_price=unit_price; exist.default_qty=default_qty; toast('已更新單價（'+projectName(project_id)+'／'+spec_type+'）'); }
-  else { UNIT_PRICES.push({ id:++unitSeq, project_id, spec_type, default_qty, unit_price }); toast('已新增單價'); }
+  if (exist){ exist.unit_price=unit_price; exist.default_qty=default_qty; toast('已更新制式單價（'+projectName(project_id)+'）'); }
+  else { UNIT_PRICES.push({ id:++unitSeq, project_id, spec_type, default_qty, unit_price }); toast('已設定制式單價'); }
   expandedPrice.add(project_id);   // 保持此建案展開
   renderPrices();
 }
@@ -502,10 +493,12 @@ function getUserForm(){
     account: document.getElementById('nu-acct').value.trim(),
     password: document.getElementById('nu-pwd').value.trim(),
     role:  document.getElementById('nu-role').value,
+    bank_code: document.getElementById('nu-code').value.trim(),
+    bank_acct: document.getElementById('nu-acctno').value.trim(),
   };
 }
 function clearUserForm(){
-  ['nu-name','nu-acct','nu-pwd'].forEach(id=>document.getElementById(id).value='');
+  ['nu-name','nu-acct','nu-pwd','nu-code','nu-acctno'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('nu-role').value='worker';
 }
 function submitUser(){
@@ -514,14 +507,15 @@ function submitUser(){
   // 帳號唯一性檢查（排除自己）
   if (USERS.some(u=>u.account===f.account && u.id!==editingUserId)) return toast('帳號已存在',true);
   if (editingUserId){
-    // 僅更新帳號相關欄位；收款資料由師傅自填，不在此覆寫
+    // 更新帳號相關欄位＋管理者代打的收款資料
     const u = USERS.find(x=>x.id===editingUserId);
-    Object.assign(u, { name:f.name, account:f.account, password:f.password, role:f.role });
+    Object.assign(u, { name:f.name, account:f.account, password:f.password, role:f.role,
+      bank_code:f.bank_code, bank_acct:f.bank_acct });
     toast('已更新使用者：'+f.name); cancelEditUser();
   } else {
-    // 新使用者的收款資料留空，待師傅於「我的收款資料」自行填寫
+    // 收款資料可由管理者代打，師傅亦能於「我的收款資料」自行修改
     USERS.push({ id:++userSeq, name:f.name, account:f.account, password:f.password, role:f.role,
-      status:'啟用', payee:'', bank_code:'', bank_acct:'' });
+      status:'啟用', payee:f.name, bank_code:f.bank_code, bank_acct:f.bank_acct });
     toast('已新增使用者：'+f.name); clearUserForm();
   }
   renderUsers();
@@ -533,6 +527,8 @@ function editUser(id){
   document.getElementById('nu-acct').value = u.account;
   document.getElementById('nu-pwd').value  = u.password||'';
   document.getElementById('nu-role').value = u.role;
+  document.getElementById('nu-code').value = u.bank_code||'';
+  document.getElementById('nu-acctno').value = u.bank_acct||'';
   document.getElementById('nu-title').textContent = '編輯使用者：'+u.name;
   document.getElementById('nu-submit').textContent = '✓ 更新使用者';
   document.getElementById('nu-cancel').style.display = '';
@@ -651,6 +647,8 @@ function toggleProject(pid){
 }
 function toggleClosed(pid){
   const p = PROJECTS.find(x=>x.id===pid); if(!p) return;
+  const next = p.closed ? '未結案' : '已結案';
+  if (!confirm('確定將建案「'+p.name+'」切換為「'+next+'」？')) return;
   p.closed = !p.closed;
 }
 function toggleExpAll(on){ document.querySelectorAll('.exp-proj').forEach(c=>c.checked=on); }
@@ -660,11 +658,13 @@ function syncExpAll(){ const b=[...document.querySelectorAll('.exp-proj')], a=do
 // 規格 4.7：撥款日期／建案-幾樓／收款人戶名／收款銀行代號／收款帳號／交易金額（NTD）
 function bankInfo(worker_id){ const u = USERS.find(x=>x.id===worker_id)||{}; return { payee:u.payee||u.name||'', code:u.bank_code||'', acct:u.bank_acct||'' }; }
 function csvCell(v){ const s=String(v??''); return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; }
+// 銀行代號／帳號為「文字」，避免 Excel 轉科學記號或吃掉開頭 0：用 ="..." 強制文字
+function csvText(v){ const s=String(v??''); return '="'+s.replace(/"/g,'""')+'"'; }
 function buildPayoutCSV(records, payoutDate){
   const head = ['撥款日期','建案/幾樓','收款人戶名','收款銀行代號','收款帳號','交易金額（NTD）'];
   const rows = records.map(r=>{
     const b = bankInfo(r.worker_id);
-    return [payoutDate, projectName(r.project_id)+' '+r.floor, b.payee, b.code, b.acct, r.amount];
+    return [payoutDate, projectName(r.project_id)+' '+r.floor, b.payee, csvText(b.code), csvText(b.acct), r.amount];
   });
   return '﻿' + [head,...rows].map(a=>a.map(csvCell).join(',')).join('\r\n');
 }
