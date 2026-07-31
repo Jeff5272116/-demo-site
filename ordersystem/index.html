@@ -40,6 +40,9 @@
   --fs-caption:11px;
 }
 *{ box-sizing:border-box; }
+/* hide all scrollbars everywhere (page + any overflow container) — scroll behavior is unchanged, only the bar is hidden */
+*{ scrollbar-width:none; }
+*::-webkit-scrollbar{ display:none; width:0; height:0; }
 html,body{ margin:0; padding:0; height:100%; background:var(--ink-900); color:var(--text); overflow:hidden; user-select:none; -webkit-user-select:none; }
 body{
   font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -76,8 +79,7 @@ blockquote{ margin:0; }
 
 /* ---------- toast (scoped inside the phone screen) ---------- */
 .toast{ background:var(--ink-900); color:#fff; padding:8px 16px; border-radius:20px; font-size:var(--fs-sub); margin-top:8px; box-shadow:0 6px 20px rgba(0,0,0,.25); text-align:center; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-#v2-toast-slot{ position:absolute; left:0; right:0; bottom:64px; z-index:850; display:flex; flex-direction:column; align-items:center; pointer-events:none; padding:0 16px; }
-body.real-phone #v2-toast-slot{ bottom:calc(64px + env(safe-area-inset-bottom, 0px)); }
+#v2-toast-slot{ position:absolute; left:0; right:0; bottom:calc(64px + env(safe-area-inset-bottom, 0px)); z-index:850; display:flex; flex-direction:column; align-items:center; pointer-events:none; padding:0 16px; }
 
 /* ---------- generic modal (Demo 說明) ---------- */
 .modal-overlay{ position:fixed; inset:0; z-index:900; display:none; align-items:center; justify-content:center; }
@@ -147,11 +149,13 @@ body.real-phone #v2-toast-slot{ bottom:calc(64px + env(safe-area-inset-bottom, 0
 
 /* =========================================================
    App stage — desktop shows a centered phone mockup,
-   real phone (<=480px) goes fullscreen (see body.real-phone below)
+   real phone (<=480px) goes fullscreen via a plain @media query below
+   (CSS-only, does not depend on JS running — see that block for why)
    ========================================================= */
 #view-v2{ position:fixed; inset:0; display:block; z-index:8; background:var(--ink-900); }
 .v2-stage{ width:100%; height:100%; display:flex; align-items:center; justify-content:center; padding:20px; }
 .phone-frame{
+  height:min(844px, calc(100vh - 48px));
   height:min(844px, calc(100dvh - 48px));
   aspect-ratio:390/844;
   width:auto;
@@ -174,7 +178,7 @@ body.real-phone #v2-toast-slot{ bottom:calc(64px + env(safe-area-inset-bottom, 0
 .v2-d0-sub-row{ display:flex; align-items:center; justify-content:space-between; margin-top:6px; gap:8px; }
 .v2-count-chip{ font-size:var(--fs-sub); color:var(--text-sub); flex:none; }
 .refresh-btn{ font-size:var(--fs-body); color:var(--ink-900); padding:4px 8px; flex:none; }
-.v2-d0-scroll{ flex:1; overflow-y:auto; overflow-x:hidden; position:relative; padding-bottom:70px; }
+.v2-d0-scroll{ flex:1; overflow-y:auto; overflow-x:hidden; position:relative; padding-bottom:calc(64px + env(safe-area-inset-bottom, 0px) + 6px); }
 .pull-indicator{ position:absolute; top:0; left:0; right:0; text-align:center; font-size:var(--fs-sub); color:var(--text-sub); opacity:0; transform:translateY(-10px); pointer-events:none; z-index:5; padding-top:6px; }
 .d0-card{ margin:8px 14px; padding:10px 12px; background:#fff; border:1px solid var(--border); border-radius:8px; min-width:0; }
 .d0-card-row1{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
@@ -185,7 +189,12 @@ body.real-phone #v2-toast-slot{ bottom:calc(64px + env(safe-area-inset-bottom, 0
 .v2-empty-state{ display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:60px 20px; color:var(--text-sub); font-size:var(--fs-h3); text-align:center; }
 .confetti-dot{ position:absolute; left:50%; top:110px; width:8px; height:8px; border-radius:50%; pointer-events:none; z-index:6; }
 
-.v2-tabbar{ position:absolute; left:0; right:0; bottom:0; height:64px; background:#fff; border-top:1px solid var(--border); display:flex; z-index:60; }
+/* .v2-tabbar is a single persistent instance shared by D0 and D1 (lives outside both
+   .v2-view panels, see markup) so switching views never re-renders/re-positions it —
+   zero visual jump. height/padding include the bottom safe-area so its white background
+   extends under the home-indicator gesture zone on notched real phones; the tappable
+   64px row itself stays centered in the non-safe portion. */
+.v2-tabbar{ position:absolute; left:0; right:0; bottom:0; height:calc(64px + env(safe-area-inset-bottom, 0px)); padding-bottom:env(safe-area-inset-bottom, 0px); background:#fff; border-top:1px solid var(--border); display:flex; z-index:60; }
 .tab-item{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; color:var(--text-sub); cursor:pointer; }
 .tab-item.active{ color:var(--gold); font-weight:700; }
 .tab-icon{ font-size:var(--fs-h3); line-height:1; }
@@ -195,7 +204,10 @@ body.real-phone #v2-toast-slot{ bottom:calc(64px + env(safe-area-inset-bottom, 0
 .v2-d1-topbar{ display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border); background:#fff; z-index:10; position:relative; }
 .v2-d1-back{ font-size:var(--fs-h3); color:var(--ink-900); padding:4px 8px; flex:none; }
 .v2-d1-title{ font-size:var(--fs-h3); font-weight:700; color:var(--ink-900); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-.v2-map-wrap{ flex:1; position:relative; overflow:hidden; }
+/* reserve space for the persistent bottom tab bar so map/booths/callouts never render under it;
+   the SVG's viewBox uses preserveAspectRatio xMidYMid (default), so shrinking this box's visible
+   height automatically re-centers focusBooth()/computeHomeView() targets — no JS math changes needed */
+.v2-map-wrap{ flex:1; position:relative; overflow:hidden; padding-bottom:calc(64px + env(safe-area-inset-bottom, 0px)); }
 .v2-map-wrap .map-toolbar{ flex-direction:column; top:14px; right:14px; }
 .v2-map-wrap .drag-hint{ top:12px; left:12px; }
 
@@ -211,17 +223,23 @@ body.real-phone #v2-toast-slot{ bottom:calc(64px + env(safe-area-inset-bottom, 0
 .demo-fab-btn{ background:rgba(255,255,255,.16); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); color:#fff; font-size:var(--fs-sub); font-weight:600; padding:8px 14px; border-radius:20px; box-shadow:0 4px 16px rgba(0,0,0,.3); white-space:nowrap; }
 .demo-fab-toggle{ display:none; width:44px; height:44px; border-radius:50%; align-items:center; justify-content:center; background:rgba(255,255,255,.22); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); color:#fff; font-size:var(--fs-h3); font-weight:700; box-shadow:0 4px 16px rgba(0,0,0,.3); }
 
-/* real phone: strip mockup chrome, go fullscreen */
-body.real-phone .v2-stage{ padding:0; }
-body.real-phone .phone-frame{ width:100vw; height:100vh; height:100dvh; aspect-ratio:auto; max-width:none; padding:0; border-radius:0; box-shadow:none; background:none; }
-body.real-phone .phone-screen{ border-radius:0; }
-/* fake iOS chrome is mockup-only; a real phone has its own status bar */
-body.real-phone .dynamic-island, body.real-phone .status-bar, body.real-phone .home-indicator{ display:none !important; }
-body.real-phone .v2-view{ padding-top:max(env(safe-area-inset-top, 0px), 10px); }
-body.real-phone .demo-fab-cluster{ right:12px; bottom:calc(64px + env(safe-area-inset-bottom, 0px) + 12px); }
-body.real-phone .demo-fab-toggle{ display:flex; }
-body.real-phone .demo-fab-menu{ display:none; }
-body.real-phone .demo-fab-menu.open{ display:flex; }
+/* real phone: strip mockup chrome, go fullscreen.
+   IMPORTANT: this is a pure CSS media query — it MUST hold with JS disabled (some
+   in-app/system preview browsers don't execute JS at all). JS (initApp -> body.real-phone)
+   only adds the same class for auxiliary JS-only behavior (e.g. auto-closing the demo fab
+   menu); it is not required for any of the visual rules below. */
+@media (max-width:480px){
+  .v2-stage{ padding:0; }
+  .phone-frame{ width:100vw; height:100vh; height:100dvh; aspect-ratio:auto; max-width:none; padding:0; border-radius:0; box-shadow:none; background:none; }
+  .phone-screen{ border-radius:0; }
+  /* fake iOS chrome is mockup-only; a real phone has its own status bar */
+  .dynamic-island, .status-bar, .home-indicator{ display:none !important; }
+  .v2-view{ padding-top:max(env(safe-area-inset-top, 0px), 10px); }
+  .demo-fab-cluster{ right:12px; bottom:calc(64px + env(safe-area-inset-bottom, 0px) + 12px); }
+  .demo-fab-toggle{ display:flex; }
+  .demo-fab-menu{ display:none; }
+  .demo-fab-menu.open{ display:flex; }
+}
 
 </style>
 </head>
@@ -250,11 +268,6 @@ body.real-phone .demo-fab-menu.open{ display:flex; }
             <div id="v2-order-list"></div>
             <div class="v2-empty-state" id="v2-empty-state">✅<br>今日配送完成 ✓</div>
           </div>
-          <div class="v2-tabbar">
-            <div class="tab-item active" id="tab-d0"><span class="tab-icon">📋</span><span class="tab-label">待送</span></div>
-            <div class="tab-item" id="tab-d1"><span class="tab-icon">🗺️</span><span class="tab-label">地圖</span></div>
-            <div class="tab-item" id="tab-profile"><span class="tab-icon">👤</span><span class="tab-label">我的</span></div>
-          </div>
         </div>
 
         <!-- D1: map -->
@@ -271,6 +284,14 @@ body.real-phone .demo-fab-menu.open{ display:flex; }
               <button class="map-tool-btn" id="v2-zoom-out">－</button>
             </div>
           </div>
+        </div>
+
+        <!-- shared bottom tab bar: single persistent instance rendered outside both
+             .v2-view panels so D0<->D1 switches never move/re-render it (zero jump) -->
+        <div class="v2-tabbar">
+          <div class="tab-item active" id="tab-d0"><span class="tab-icon">📋</span><span class="tab-label">待送</span></div>
+          <div class="tab-item" id="tab-d1"><span class="tab-icon">🗺️</span><span class="tab-label">地圖</span></div>
+          <div class="tab-item" id="tab-profile"><span class="tab-icon">👤</span><span class="tab-label">我的</span></div>
         </div>
 
         <div class="v2-sheet-backdrop" id="v2-sheet-backdrop"></div>
